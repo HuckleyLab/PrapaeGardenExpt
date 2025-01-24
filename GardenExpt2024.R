@@ -4,9 +4,10 @@ library(dplyr)
 library(patchwork)
 library(reshape2)
 library(viridis)
+library(nlme)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Metadata/2024PierisExpts/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Metadata/2024PierisExpts/")
@@ -66,10 +67,10 @@ tpc$rgr_17= (log10(as.numeric(tpc$X17.mass.f)*0.001)-log10(as.numeric(tpc$X17.ma
 # tpc$rgr_35[tpc$X35.notes %in% c("O", NA)]<- NA 
 
 tpc$f.ind= paste(tpc$FEMALE, tpc$INDV, tpc$expt, sep="_")
-tpc= tpc[,c("FEMALE","f.ind","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35")]
+tpc= tpc[,c("FEMALE","f.ind","StartDate","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35")]
 
 #to long format
-tpc.l <- melt(setDT(tpc), id.vars = c("FEMALE","f.ind"), variable.name = "temp")
+tpc.l <- melt(setDT(tpc[,c("FEMALE","f.ind","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35")]), id.vars = c("FEMALE","f.ind"), variable.name = "temp")
 tpc.l$temp= as.numeric(gsub("rgr_","",tpc.l$temp))
 
 #plot
@@ -175,18 +176,18 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     ggtitle("1999 & 2024") +ylim(-0.02,0.06) 
   
   #----------------
+  # Figure 2. TPC comparison
+  
   #save figure
   if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/")
   if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/")
   #setwd('/Volumes/GoogleDrive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/')
-  pdf("PrapaeTPC_2024.pdf",height = 6, width = 15)
+  pdf("Fig2_PrapaeTPC_2024.pdf",height = 6, width = 15)
   tpc.plot.h + tpc.plot +tpc.all.plot
   dev.off()
   
   #-------------------
   #Analysis
-  
-  library(nlme)
   
   names(tpc.lh)= names(tpc.l)
   tpc.l$time= "current"
@@ -207,27 +208,66 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   
   if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/My Drive/Buckley/Work/WARP/data/PrapaeGarden2024/")
   if(desktop=="n") setwd("/Users/lbuckley/Google Drive/My Drive/Buckley/Work/WARP/data/PrapaeGarden2024/")
-  gdat= read.csv("Expt2ChecksSurvival2024.csv")
+  gdat= read.csv("FieldSelnExpt2024SurvivalChecks - June Experiments_Jan2025.csv", na.strings=c("N/A",""))
+ gdat$FecCheckDate<- NA   
+ gdat$FecEggCount<- NA
+ gdat$FecMomAlive.<- NA
+ gdat$pupaparasitized<- NA
   gdat$expt<- "june"
-  gdat<- gdat[,-c(11:14)]
-  gdat2= read.csv("Expt2ChecksSurvival2024 - July Experiments.csv")
+  
+  gdat2= read.csv("FieldSelnExpt2024SurvivalChecks - July Experiments_Jan2025.csv", na.strings=c("N/A",""))
   gdat2$expt<- "july"
   
   gdat<- rbind(gdat, gdat2)
   
   #match TPC to field
   gdat$f.ind<- paste(gdat$Female, gdat$Individual, gdat$expt, sep="_")
-  
   match1<- match(tpc$f.ind, gdat$f.ind)
-  
   matched<- which(!is.na(match1))
   
+  #metrics
+  #pupal mass
   tpc$pupal_massmg<- NA
   tpc$pupal_massmg[matched]<- gdat$pupal_massmg[match1[matched]]
   tpc$pupal_massmg<- as.numeric(tpc$pupal_massmg)
   
+  #fec egg count
+  tpc$FecEggCount<- NA
+  tpc$FecEggCount[matched]<- gdat$FecEggCount[match1[matched]]
+  tpc$FecEggCount[which(tpc$FecEggCount=="13 (some aphids)")]<-"13"
+  tpc$FecEggCount<- as.numeric(tpc$FecEggCount)
+  
+  #survival 
+  gdat$surv<- 0
+  gdat$surv[which(!is.na(gdat$pupal_massmg))]<- 1
+  tpc$surv[matched]<- gdat$surv[match1[matched]]
+  tpc$surv<- as.numeric(tpc$surv)
+  
+  #pupal time
+  dates<- c("30-Jun", "1-Jul",  "29-Jun", "2-Jul",  "27-Jun", "3-Jul")
+  dates2<- c("6/30/24", "7/1/24",  "6/29/24", "7/2/24",  "6/27/24", "7/3/24")
+  match2<- match(gdat$pupacupdate, dates)
+  gdat$pupacupdate[which(!is.na(match2))]<- dates2[na.omit(match2)]
+  
+  dates<- c("9-Jul",   "8-Jul",   "10-Jul",  "11-Jul",  "12-Jul",  "6-Jul",   "7-Jul")
+  dates2<- c("7/9/24", "7/8/24",  "7/10/24", "7/11/24",  "7/12/24", "7/6/24", "7/7/24")
+  match2<- match(gdat$eclosiondate, dates)
+  gdat$eclosiondate[which(!is.na(match2))]<- dates2[na.omit(match2)]
+  
+  tpc$pupdate<- NA
+  tpc$pupdate[matched]<- gdat$pupacupdate[match1[matched]]
+
+  tpc$pupdate<- as.Date(as.character(tpc$pupdate), format="%m/%d/%y")
+  tpc$StartDate<- gsub("/24", "/2024", tpc$StartDate)
+  tpc$StartDate<- as.Date(as.character(tpc$StartDate), format="%m/%d/%Y")
+  
+  tpc$puptime<- as.double(difftime(tpc$pupdate, tpc$StartDate, units = c("days")))
+  
   #to long format
-  tpc.gl <- melt(tpc, id.vars = c("FEMALE","f.ind","pupal_massmg"), variable.name = "temp")
+  tpc2<- tpc[, !(names(tpc) %in% c("StartDate","pupdate"))]
+  tpc.gl <- melt(tpc2, 
+                 id.vars = c("FEMALE","f.ind","pupal_massmg","FecEggCount","surv","puptime"), 
+                 variable.name = "temp")
   tpc.gl$temp= as.numeric(gsub("rgr_","",tpc.gl$temp))
   
   #---------
@@ -300,8 +340,8 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   
   #----------------------
   #historic and recent pupal mass
-  tpc.gl.all<- as.data.frame(rbind(tpc.gl[,c("expt","pupal_massmg","temp","value")], tpc.gl.h[,c("expt","pupal_massmg","temp","value")]))
-
+  tpc.gl.all<- as.data.frame(rbind(tpc.gl[,c("expt","pupal_massmg","temp","surv", "puptime", "FecEggCount","value")], tpc.gl.h[,c("expt","pupal_massmg","temp","surv", "puptime", "FecEggCount","value")]))
+  
   expts<- c("june","july","aug")
   expts.lab<- c("June 2024","July 2024","Aug 1999")
   
@@ -316,20 +356,44 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     geom_point()+geom_smooth(method="lm")+
     ylab("Pupal mass (mg)") +xlab("RGR (g/g/h)")
   
+  plot.surv.b<- ggplot(tpc.gl.all, aes(x=value,y=surv)) + 
+    facet_grid(expt~temp)+
+    geom_point()+geom_smooth(method="lm")+
+    ylab("Survival") +xlab("RGR (g/g/h)")
+  
+  plot.pt.b<- ggplot(tpc.gl.all, aes(x=value,y=puptime)) + 
+    facet_grid(expt~temp)+
+    geom_point()+geom_smooth(method="lm")+
+    ylab("Pupal time (day)") +xlab("RGR (g/g/h)")
+  
+  plot.ec.b<- ggplot(tpc.gl.all, aes(x=value,y=FecEggCount)) + 
+    facet_grid(expt~temp)+
+    geom_point()+geom_smooth(method="lm")+
+    ylab("Egg count") +xlab("RGR (g/g/h)")
+  
   #----------------------
   #save figure
   if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/")
   if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/")
   #setwd('/Volumes/GoogleDrive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/')
-  pdf("PrapaeGarden_2024.pdf",height = 8, width = 8)
-  plot.pm
+  
+  #Figure 3. selection
+  pdf("Fig3_GardenSelection.pdf",height = 8, width = 11)
+  plot.pm.b
   dev.off()
   
-  pdf("PrapaeGardenHist_2024.pdf",height = 8, width = 11)
-  plot.pm.h +plot.fec.h +plot.surv.h +plot.ttp.h
+  #Figure S1. survival
+  pdf("FigS1_GardenSurvival.pdf",height = 8, width = 11)
+  plot.surv.b
   dev.off()
   
-  pdf("PrapaeGarden_both.pdf",height = 8, width = 11)
+  #Figure S2. pupal time
+  pdf("FigS2_GardenPupalTime.pdf",height = 8, width = 11)
+  plot.pt.b
+  dev.off()
+  
+  #Figure S3. egg count
+  pdf("FigS3_GardenEggCount.pdf",height = 8, width = 11)
   plot.pm.b
   dev.off()
   
