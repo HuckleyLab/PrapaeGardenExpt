@@ -7,7 +7,7 @@ library(viridis)
 library(nlme)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Metadata/2024PierisExpts/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Metadata/2024PierisExpts/")
@@ -398,11 +398,36 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   dev.off()
   
   #-------
-  #analyze
-  mod= lm(pupal_massmg ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, data= tpc) 
+  ## Analyze
+  # Pupal mass: significant difference at 11, 23, 35C
+  # Fecundity egg count: NS
+  # Survival: significant difference at 17, 23C
+  # Pupal time: NS
+  
+  #pick response variable: 
+  #tpc$rvar<- tpc$pupal_massmg
+  #tpcm<- tpc[,-"FecEggCount"]
+  
+  #tpc$rvar<- tpc$FecEggCount
+  #tpcm<- tpc
+  # 
+  # tpc$rvar<- tpc$surv
+  # tpcm<- tpc[,-c("FecEggCount","puptime")]
+  # 
+  tpc$rvar<- tpc$puptime
+  tpcm<- tpc[,-which(colnames(tpc)=="FecEggCount")]
+  
+  #experiment currently fixed effect, make randow or otherwise change
+  mod= lm(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35 +expt, data= tpcm) 
+  #divide experiments
+  #mod= lm(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, data= tpcm[tpcm$expt=="june",])
+  #mod= lm(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, data= tpcm[tpcm$expt=="july",])
   anova(mod)
   
-  mod.lmer <- lme(pupal_massmg ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35,random=~1|FEMALE, data = na.omit(tpc))
+  mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35 +expt, random=~1|FEMALE, data = na.omit(tpcm))
+  #divide experiments
+  #mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, random=~1|FEMALE, data = na.omit(tpcm[tpcm$expt=="june",]))
+  #mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, random=~1|FEMALE, data = na.omit(tpcm[tpcm$expt=="july",]))
   anova(mod.lmer)
   
   #----
@@ -439,9 +464,8 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   anova(mod.lmer)
   
   #--------------------
-  #G matrix
-  
-  library(lme4)
+  ## Variance covariance analysis
+# Estimate G matrix
   
   tpc.l2= na.omit(tpc.l)
   tpc.l2$temp= factor(tpc.l2$temp, levels=c(11,17,23,29,35))
@@ -462,25 +486,26 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   
   old <- options(contrasts=c("contr.sum","contr.poly"))
   
-  tpc<- as.matrix(tpc)
-  tpc.lm = lm(tpc[,c(5,6,3,4,7)]~as.factor(tpc[,"FEMALE"]))
-  cov.matrix <- CalculateMatrix(tpc.lm)
+  #tpc.lm = lm(as.matrix(tpc[,c(5,6,3,4,7)])~as.factor(tpc[,"FEMALE"]))
   
-  options(old)
-  #To obtain a correlation matrix, use:
-  cor.matrix <- cov2cor(cov.matrix)
-  
-  cor.matrix <- cov2cor(cov.matrix)
-  
-  cor.matrix.m <- melt(cor.matrix)
-  plot.cov2= ggplot(data = cor.matrix.m, aes(x=Var1, y=Var2, fill=value)) + 
-    geom_tile()+scale_fill_viridis()
-  
-  #tutorial
-  #  https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/j.1365-2656.2009.01639.x
+  # cov.matrix <- CalculateMatrix(tpc.lm)
+  # 
+  # options(old)
+  # #To obtain a correlation matrix, use:
+  # cor.matrix <- cov2cor(cov.matrix)
+  # 
+  # cor.matrix <- cov2cor(cov.matrix)
+  # 
+  # cor.matrix.m <- melt(cor.matrix)
+  # plot.cov2= ggplot(data = cor.matrix.m, aes(x=Var1, y=Var2, fill=value)) + 
+  #   geom_tile()+scale_fill_viridis()
+  # 
+  # #tutorial
+  # #  https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/j.1365-2656.2009.01639.x
   
   #But: a quick and dirty method is probably sufficient for now:  compute mean values for each family at each temperature, and then use the var function is compute the var-covariance matrix on the family means.  This is the least-squares estimate of the broad sense G matrix.  Using var on the individual values gives the comparable estimate of the P (phenotypic) matrix.  These should give a good approximation to the REML estimates (which are constrained so that you don’t get variances< 0 ).
   
+  #CURRENT
   #family means
   tpc.f <- tpc %>% 
     group_by(FEMALE) %>% 
@@ -490,41 +515,60 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
                      rgr_29 = mean(rgr_29, na.rm=T),
                      rgr_35 = mean(rgr_35, na.rm=T) )
   
-  tpc.fh <- tpc.h %>% 
-    group_by(Mom) %>% 
-    dplyr::summarise(rgr_11 = mean(RGR11, na.rm=T),
-                     rgr_17 = mean(RGR17, na.rm=T),
-                     rgr_23 = mean(RGR23, na.rm=T),
-                     rgr_29 = mean(RGR29, na.rm=T),
-                     rgr_35 = mean(RGR35, na.rm=T) )
-  
   #G matrix
   g.mat<- var(tpc.f[,-1], na.rm=TRUE)*10^6
-  
   g.mat.m <- melt(g.mat)
-  plot.g.mat= ggplot(data = g.mat.m, aes(x=Var1, y=Var2, fill=value)) + 
-    geom_tile()+scale_fill_viridis()
-  
-  g.mat.h<- var(tpc.fh[,-1], na.rm=TRUE)*10^6
-  
-  g.mat.mh <- melt(g.mat.h)
-  plot.g.math= ggplot(data = g.mat.mh, aes(x=Var1, y=Var2, fill=value)) + 
-    geom_tile()+scale_fill_viridis()
   
   #P matrix
-  p.mat<- var(tpc[,c(5,6,3,4,7)], na.rm=TRUE)*10^6
-  
+  p.mat<- var(tpc[,c("rgr_11","rgr_17","rgr_23","rgr_29","rgr_35")], na.rm=TRUE)*10^6
   p.mat.m <- melt(p.mat)
-  plot.p.mat= ggplot(data = p.mat.m, aes(x=Var1, y=Var2, fill=value)) + 
-    geom_tile()+scale_fill_viridis()
   
-  p.mat.h<- var(tpc.h[,c(5,6,3,4,7)], na.rm=TRUE)*10^6
+  #HISTORIC
+  #family means
+  tpc.fh <- tpc.h %>% 
+    group_by(Mom) %>% 
+    dplyr::summarise(RGR11 = mean(RGR11, na.rm=T),
+                     RGR17 = mean(RGR17, na.rm=T),
+                     RGR23 = mean(RGR23, na.rm=T),
+                     RGR29 = mean(RGR29, na.rm=T),
+                     RGR35 = mean(RGR35, na.rm=T) )
   
-  p.mat.mh <- melt(p.mat.h)
-  plot.p.math= ggplot(data = p.mat.mh, aes(x=Var1, y=Var2, fill=value)) + 
-    geom_tile()+scale_fill_viridis()
+  #G matrix
+  g.mat<- var(tpc.fh[,-1], na.rm=TRUE)*10^6
+  g.mat.m.h <- melt(g.mat)
   
-  #old correlations
+  #P matrix
+  p.mat<- var(tpc.h[,c("RGR11","RGR17","RGR23","RGR29","RGR35")], na.rm=TRUE)*10^6
+  p.mat.m.h <- melt(p.mat)
+  
+  #-------------------
+  #Combine Var matrices
+  g.mat.m$type<- "G"; g.mat.m$time<- "current"
+  p.mat.m$type<- "P"; p.mat.m$time<- "current"
+  g.mat.m.h$type<- "G"; g.mat.m.h$time<- "historic"
+  p.mat.m.h$type<- "P"; p.mat.m.h$time<- "historic"
+  var.all<- rbind(g.mat.m, p.mat.m, g.mat.m.h, p.mat.m.h)
+  var.all$Var1 <- sub("rgr_", "RGR", var.all$Var1)
+  var.all$Var2 <- sub("rgr_", "RGR", var.all$Var2)
+
+    #----------------
+  ### Variance Covariance plot
+  # Current variances are larger now than in the past for both G and P, particularly at 35C
+  # Stronger covariances now between performance at 29 and 35: indicative of tradeoff
+  
+  plot.var= ggplot(data = var.all, aes(x=Var1, y=Var2, fill=value)) + 
+    geom_tile()+
+    facet_grid(type~time)+
+    scale_fill_gradient2(low ="orange", high = "blue", space = "Lab")
+  
+  #save figure 
+  
+  pdf("PrapaeTPC_cov.pdf",height = 10, width = 10)
+  plot.var
+  dev.off()
+  
+  #-------------------- 
+  ## Old correlations
   # Kingsolver et al. 2001. Variation, selection and evolution of function-valued traits, [https://link.springer.com/chapter/10.1007/978-94-010-0585-2_7]
   
   cov.old= matrix(c(1.255, -.229, .043, -1.027, -.214,
@@ -543,19 +587,9 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     geom_tile()+scale_fill_viridis()
   
   #----------------
-  #save figure
-  setwd('/Volumes/GoogleDrive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/')
-  pdf("PrapaeTPC_cov.pdf",height = 6, width = 15)
-  plot.cov + plot.cov2 |
-    plot.p.mat + plot.cov.old
-  dev.off()
-  
-  plot.p.mat + plot.g.mat +plot.cov.old
+  #LMER + EVOLQG + OLD COV
+  #plot.cov +plot.cov2 +plot.cov.old
   
   #-------------------- 
-  plot.cov
-  plot.cov.old
-  
-  plot.g.mat + plot.p.mat | plot.g.math + plot.p.math
   
   
