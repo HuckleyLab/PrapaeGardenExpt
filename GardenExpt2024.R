@@ -5,21 +5,21 @@ library(patchwork)
 library(reshape2)
 library(viridis)
 library(nlme)
+library(lme4)
 
 #toggle between desktop (y) and laptop (n)
 desktop<- "y"
 
-if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Metadata/2024PierisExpts/")
-if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Metadata/2024PierisExpts/")
-#setwd("/Users/laurenbuckley/Google Drive/My Drive/Buckley/Work/WARP/data/PrapaeGarden2024/")
+if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
+if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 
-tpc1= read.csv("2024TPCFieldSelnJune.csv")
+tpc1= read.csv("2024_06_20_tpc_field_seln_june.csv")
+tpc1 <- tpc1[,-c(44)]
 tpc1$expt<- "june"
-tpc1 <- tpc1[,-c(44:47)]
 
-tpc2= read.csv("2024TPCFieldSelnJuly(Batch 1, 7-27).csv")
+tpc2= read.csv("2024_07_27_tpc_field_seln_july_batch_1.csv")
 tpc2<- tpc2[,-which(colnames(tpc2)=="X29.notes.1")]
-tpc3= read.csv("2024TPCFieldSelnJuly(Batch 2, 7-28).csv")
+tpc3= read.csv("2024_07_28_tpc_field_seln_july_batch_2.csv")
 tpc3<- tpc3[,-which(colnames(tpc3)=="X11.notes.1")]
 tpc2= rbind(tpc2, tpc3)
 tpc2$expt<- "july"
@@ -42,6 +42,24 @@ length(which(tpc$X23.mass.i<10)) # none less than 10mg
 
 #tpc<- tpc[which(tpc$expt=="july"),]
 
+#----
+#fix formatting issues
+# 23,11,29,35,17
+#tpc[grep(":",tpc$X17.mass.f),]
+tpc$X23.mass.f[133]<- 15.44
+tpc$X11.mass.i[133]<- 15.44
+tpc$X23.mass.f[139]<- 14.41
+
+#fill in blank final times with weighing time
+tpc$X11.time.f[which(is.na(tpc$X11.time.f))]<- tpc$weigh.time.2[which(is.na(tpc$X11.time.f))]
+tpc$X29.time.f[which(is.na(tpc$X29.time.f))]<- tpc$weigh.time.3[which(is.na(tpc$X29.time.f))]
+tpc$X35.time.f[which(is.na(tpc$X35.time.f))]<- tpc$weigh.time.4[which(is.na(tpc$X35.time.f))]
+tpc$X17.time.f[which(is.na(tpc$X17.time.f))]<- tpc$weigh.time.5[which(is.na(tpc$X17.time.f))]
+#fill in blank initial time with last weighing time
+tpc$X29.time.i[which(is.na(tpc$X29.time.i))]<- tpc$X11.time.f[which(is.na(tpc$X29.time.i))]
+
+#----
+#estimate growth rate
 tpc$rgr_23= (log10(as.numeric(tpc$X23.mass.f)*0.001)-log10(as.numeric(tpc$X23.mass.i)*0.001))/
   as.numeric(difftime(as.POSIXct(tpc$X23.time.f,format="%H:%M"), as.POSIXct(tpc$X23.time.i,format="%H:%M"), units='hours'))
 
@@ -67,7 +85,7 @@ tpc$rgr_17= (log10(as.numeric(tpc$X17.mass.f)*0.001)-log10(as.numeric(tpc$X17.ma
 # tpc$rgr_35[tpc$X35.notes %in% c("O", NA)]<- NA 
 
 tpc$f.ind= paste(tpc$FEMALE, tpc$INDV, tpc$expt, sep="_")
-tpc= tpc[,c("FEMALE","f.ind","StartDate","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35")]
+tpc= tpc[,c("FEMALE","f.ind","StartDate","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35","expt")]
 
 #to long format
 tpc.l <- melt(setDT(tpc[,c("FEMALE","f.ind","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35")]), id.vars = c("FEMALE","f.ind"), variable.name = "temp")
@@ -86,7 +104,7 @@ tpc.agg.f <- tpc.l %>%
 
 #add means
 tpc.plot= tpc.plot + 
-  geom_line(data=tpc.agg.f, aes(x=temp, y = mean, group=FEMALE), size=1, col="orange")
+  geom_line(data=tpc.agg.f, aes(x=temp, y = mean, group=FEMALE), linewidth=1, col="darkorange")
 
 #---
 #plot mean values
@@ -97,17 +115,14 @@ tpc.agg <- tpc.l %>%
 
 #add means
 tpc.plot= tpc.plot + 
-  geom_errorbar(data=tpc.agg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="blue")+
-  geom_point(data=tpc.agg, aes(x=temp, y = mean), size=3, col="blue")+
+  geom_errorbar(data=tpc.agg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
+  geom_point(data=tpc.agg, aes(x=temp, y = mean), size=4, col="black", fill="darkgoldenrod1", pch=21)+
   theme_bw()+xlab("Temperature (C)")+ylab("RGR (g/g/h)")+
   ggtitle("2024") +ylim(-0.02,0.06)
 
 #-------------------------
 #Historic data
 
-if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/data/Initial/")
-if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/data/Initial/")
-#setwd('/Volumes/GoogleDrive/Shared drives/TrEnCh/Projects/WARP/Analyses/data/Initial/')
 tpc.h= read.csv("PrapaeUW.Seln2.1999.Combineddata.OPUS2021.csv")
 
 tpc.h$f.ind= paste(tpc.h$Mom, tpc.h$ID, sep="_")
@@ -130,7 +145,7 @@ tpc.agg.fh <- tpc.lh %>%
 
 #add means
 tpc.plot.h= tpc.plot.h + 
-  geom_line(data=tpc.agg.fh, aes(x=temp, y = mean, group=Mom), size=1, col="darkgreen")
+  geom_line(data=tpc.agg.fh, aes(x=temp, y = mean, group=Mom), size=1, col="blue1")
 
 #---
 #plot mean values
@@ -141,8 +156,8 @@ tpc.agg.h <- tpc.lh %>%
 
 #add means
 tpc.plot.h= tpc.plot.h + 
-  geom_errorbar(data=tpc.agg.h, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="blue")+
-  geom_point(data=tpc.agg.h, aes(x=temp, y = mean), size=3, col="blue")+
+  geom_errorbar(data=tpc.agg.h, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
+  geom_point(data=tpc.agg.h, aes(x=temp, y = mean), size=4, col="black", fill="cornflowerblue", pch=21, linewidth=2)+
   theme_bw()+xlab("Temperature (C)")+ylab("RGR (g/g/h)")+
   ggtitle("1999") +ylim(-0.02,0.06)
 
@@ -164,24 +179,23 @@ tpc.agg.f.all= rbind(tpc.agg.f, tpc.agg.fh)
 tpc.agg.f.all$yrfemale= paste(tpc.agg.f.all$year, tpc.agg.f.all$FEMALE)
 
 tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
-  geom_line(aes(group=yrfemale)) +scale_color_manual(values=c("darkgreen", "orange"))
+  geom_line(aes(group=yrfemale)) +scale_color_manual(values=c("blue1", "darkorange"))
 #+scale_color_viridis_d()
 
   #add means
   tpc.all.plot= tpc.all.plot + 
     geom_errorbar(data=tpc.agg.all, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se, col=factor(year)), width=0)+
-    geom_point(data=tpc.agg.all, aes(x=temp, y = mean, col=factor(year)), size=3)+
+    geom_point(data=tpc.agg.all, color="black", aes(x=temp, y = mean, fill=factor(year)), size=3, pch=21)+
     theme_bw()+xlab("Temperature (C)")+ylab("RGR (g/g/h)")+
-    labs(color="Year")+
-    ggtitle("1999 & 2024") +ylim(-0.02,0.06) 
+    labs(color="Year")+ scale_fill_manual(values=c("cornflowerblue", "darkgoldenrod1"))+
+    ggtitle("1999 & 2024") +ylim(-0.02,0.06) + guides(fill = FALSE)
   
   #----------------
   # Figure 2. TPC comparison
   
   #save figure
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/")
-  #setwd('/Volumes/GoogleDrive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/')
+  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
+  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
   pdf("Fig2_PrapaeTPC_2024.pdf",height = 6, width = 15)
   tpc.plot.h + tpc.plot +tpc.all.plot
   dev.off()
@@ -206,16 +220,16 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #=================================
   # Match to field
   
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/My Drive/Buckley/Work/WARP/data/PrapaeGarden2024/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/My Drive/Buckley/Work/WARP/data/PrapaeGarden2024/")
-  gdat= read.csv("FieldSelnExpt2024SurvivalChecks - June Experiments_Jan2025.csv", na.strings=c("N/A",""))
+  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
+  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
+  gdat= read.csv("FieldSelnExpt2024SurvivalChecks_June Experiments.csv", na.strings=c("N/A",""))
  gdat$FecCheckDate<- NA   
  gdat$FecEggCount<- NA
  gdat$FecMomAlive.<- NA
  gdat$pupaparasitized<- NA
   gdat$expt<- "june"
   
-  gdat2= read.csv("FieldSelnExpt2024SurvivalChecks - July Experiments_Jan2025.csv", na.strings=c("N/A",""))
+  gdat2= read.csv("FieldSelnExpt2024SurvivalChecks_July Experiments.csv", na.strings=c("N/A",""))
   gdat2$expt<- "july"
   
   gdat<- rbind(gdat, gdat2)
@@ -263,10 +277,13 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   
   tpc$puptime<- as.double(difftime(tpc$pupdate, tpc$StartDate, units = c("days")))
   
+  #drop one outlier big pupal mass
+  tpc<- tpc[-which(tpc$pupal_massmg>275),]
+  
   #to long format
   tpc2<- tpc[, !(names(tpc) %in% c("StartDate","pupdate"))]
   tpc.gl <- melt(tpc2, 
-                 id.vars = c("FEMALE","f.ind","pupal_massmg","FecEggCount","surv","puptime"), 
+                 id.vars = c("FEMALE","f.ind","pupal_massmg","FecEggCount","surv","puptime","expt"), 
                  variable.name = "temp")
   tpc.gl$temp= as.numeric(gsub("rgr_","",tpc.gl$temp))
   
@@ -300,9 +317,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #----------------------
   #plot historic data
   
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/data/Initial/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/data/Initial/")
-  #setwd('/Volumes/GoogleDrive/Shared drives/TrEnCh/Projects/WARP/Analyses/data/Initial/')
   tpc.h= read.csv("PrapaeUW.Seln2.1999.Combineddata.OPUS2021.csv")
   
   tpc.h$f.ind= paste(tpc.h$Mom, tpc.h$ID, sep="_")
@@ -361,6 +375,12 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     geom_point()+geom_smooth(method="lm")+
     ylab("Survival") +xlab("RGR (g/g/h)")
   
+  #survival distribution plots
+  plot.surv.histb<- ggplot(tpc.gl.all[!is.na(tpc.gl.all$surv),], aes(x=value,color=factor(surv), group=surv)) + 
+    facet_grid(expt~temp)+
+    geom_density(aes(fill=factor(surv)), alpha=0.5)+
+    ylab("Density") +xlab("RGR (g/g/h)")
+  
   plot.pt.b<- ggplot(tpc.gl.all, aes(x=value,y=puptime)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
@@ -373,9 +393,8 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   
   #----------------------
   #save figure
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/")
-  #setwd('/Volumes/GoogleDrive/Shared drives/TrEnCh/Projects/WARP/Analyses/figures/')
+  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
+  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
   
   #Figure 3. selection
   pdf("Fig3_GardenSelection.pdf",height = 8, width = 11)
@@ -387,6 +406,10 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   plot.surv.b
   dev.off()
   
+  pdf("FigS1_GardenSurvivalDist.pdf",height = 8, width = 11)
+  plot.surv.histb
+  dev.off()
+  
   #Figure S2. pupal time
   pdf("FigS2_GardenPupalTime.pdf",height = 8, width = 11)
   plot.pt.b
@@ -394,7 +417,7 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   
   #Figure S3. egg count
   pdf("FigS3_GardenEggCount.pdf",height = 8, width = 11)
-  plot.pm.b
+  plot.ec.b
   dev.off()
   
   #-------
@@ -445,6 +468,7 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   tpc.h2$rgr_29 <- tpc.h2$RGR29
   tpc.h2$rgr_35 <- tpc.h2$RGR35
   
+  tpc<- tpc[,c("FEMALE","f.ind","expt","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35","pupal_massmg","FecEggCount","surv","puptime","time")]
   tpc.h2<- tpc.h2[,c("FEMALE","f.ind","expt","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35","pupal_massmg","FecEggCount","surv","puptime","time")]
   
   tpc.all<- rbind(tpc, tpc.h2)
@@ -455,7 +479,7 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   tpc.all$rvar<- tpc.all$surv
   tpc.all$rvar<- tpc.all$puptime
   
-  tpcm<- tpc.all[,-"FecEggCount"]
+  tpcm<- tpc.all[,-which(colnames(tpc.all)=="FecEggCount")]
   
   mod= lm(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35 +time+ rgr_11*time +rgr_17*time +rgr_23*time +rgr_29*time +rgr_35*time, data= tpcm) 
   anova(mod)
@@ -482,7 +506,7 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   plot.cov= ggplot(data = vcov.m, aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile()+scale_fill_viridis()
   
-  library(evolqg)
+  #library(evolqg)
   
   old <- options(contrasts=c("contr.sum","contr.poly"))
   
@@ -585,10 +609,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   cov.old <- melt(cov.old)
   plot.cov.old= ggplot(data = cov.old, aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile()+scale_fill_viridis()
-  
-  #----------------
-  #LMER + EVOLQG + OLD COV
-  #plot.cov +plot.cov2 +plot.cov.old
   
   #-------------------- 
   
