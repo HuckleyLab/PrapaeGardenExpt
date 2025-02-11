@@ -421,6 +421,19 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   dev.off()
   
   #-------
+  # Plot correlations
+  
+  plot.cor1<- ggplot(tpc.gl.all, aes(x=pupal_massmg,y=puptime, color=expt)) + 
+    geom_point()+geom_smooth(method="lm")
+  
+  plot.cor2<- ggplot(tpc.gl.all, aes(x=pupal_massmg,y=FecEggCount, color=expt)) + 
+    geom_point()+geom_smooth(method="lm")
+  
+  pdf("Prapae_correlations.pdf",height = 6, width = 10)
+  plot.cor1 +plot.cor2
+  dev.off()
+  
+  #-------
   ## Analyze
   # Pupal mass: significant difference at 11, 23, 35C
   # Fecundity egg count: NS
@@ -547,6 +560,9 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   p.mat<- var(tpc[,c("rgr_11","rgr_17","rgr_23","rgr_29","rgr_35")], na.rm=TRUE)*10^6
   p.mat.m <- melt(p.mat)
   
+  g.mat.c<-g.mat
+  p.mat.c<-p.mat
+  
   #HISTORIC
   #family means
   tpc.fh <- tpc.h %>% 
@@ -564,6 +580,9 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #P matrix
   p.mat<- var(tpc.h[,c("RGR11","RGR17","RGR23","RGR29","RGR35")], na.rm=TRUE)*10^6
   p.mat.m.h <- melt(p.mat)
+  
+  #write out matrices
+  write.csv(rbind(g.mat.c,p.mat.c,g.mat,p.mat), "matrices.csv" )
   
   #-------------------
   #Combine Var matrices
@@ -586,7 +605,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     scale_fill_gradient2(low ="orange", high = "blue", space = "Lab")
   
   #save figure 
-  
   pdf("PrapaeTPC_cov.pdf",height = 10, width = 10)
   plot.var
   dev.off()
