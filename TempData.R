@@ -16,7 +16,7 @@ library(readxl)
 #Taylor version: https://github.com/taylorhatcher/WARP2024/tree/main
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
@@ -139,10 +139,111 @@ Tdist.day.plot + Tdist.expday.plot
   dev.off()
 
   #==================
-
-
- 
- 
+#Plot temperature distribution with selection 
+  Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in% c(1999,2024)),]
+  
+  Tdist.plot <- ggplot(Tplot, aes(x=Tmean, color=factor(Year), fill=factor(Year), group=factor(Year))) +  geom_density(alpha=0.5)+
+    scale_fill_viridis_d() +scale_color_viridis_d()+
+    theme_classic(base_size = 18)+
+    labs(x = "T mean (°C)", color = "Year", fill="Year") 
+  
+  
+  #compute from GardenExpt2024
+  #tpc.agg.h
+  
+  #Figure 2, mean short term mass-specific growth rate, from kingsolver 2000, 
+  #selection gradient
+  #Figure 7
+  temps= c(11,17,23,29,35)
+  pm.sg= c(0.338,0.182, 0.190, -0.233, -0.217) #selection gradient for pupal mass
+  sg= as.data.frame(cbind(temps, pm.sg))
+  #add y values
+  sg$ys= tpc.agg.h$mean
+  sg$Year=1999
+  
+  plot.sel<- Tdist.plot +
+    #add TPC means
+    geom_point(data=sg, aes(x=temps, y=ys))+
+    geom_line(data=sg, aes(x=temps, y=ys))+
+  #add selection arrows
+  geom_segment(data=sg, aes(x = temps, y = ys, xend = temps, yend = ys+pm.sg/20),
+                        arrow = arrow(length = unit(0.5, "cm")), lwd=1.2)
+  
+  #==================
+  #Temp distributions over time  
+  
+  #GHCND date
+  #find stations: https://ncics.org/portfolio/monitor/ghcn-d-station-data/ 
+  # SEATTLE SAND POINT WEATHER FORECAST OFFICE, WA US (USW00094290)
+  
+  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/GHCNdata/")
+  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/GHCNdata/")
+  
+  t.dat<- read.csv("USW00094290.csv")
+  t.dat$site="Seattle"
+  
+  t.dat$tmin= t.dat$TMIN/10 #divide by ten
+  t.dat$tmax= t.dat$TMAX/10
+  t.dat$month= round(month(as.POSIXlt(t.dat$DATE)))
+  t.dat$year= year(as.POSIXlt(t.dat$DATE))
+  #restrict to growing season
+  t.dat= t.dat[which(t.dat$month %in% c(4,5,7,8)),] 
+  
+  #code season
+  #month 3,4 vs 7,8
+  t.dat$season<- NA
+  t.dat$season[which(t.dat$month %in% c(4:5))] ="spring"
+  t.dat$season[which(t.dat$month %in% c(7:8))] ="summer"
+  
+  #restrict years
+  t.dat= t.dat[which(t.dat$year %in% c(1987:2021)),]
+  t.dat1= t.dat[which(t.dat$year %in% c(1991:1994)),]
+  #or 87-92, 1990:1994
+  t.dat1$period="initial"
+  t.dat2= t.dat[which(t.dat$year %in% c(2016,2018,2019,2020)),]
+  t.dat2$period="recent"
+  #combine
+  t.dat= rbind(t.dat1,t.dat2)
+  
+  #just day
+  dtr=function(T_max, T_min, t=7:18){
+    gamma= 0.44 - 0.46* sin(0.9 + pi/12 * t)+ 0.11 * sin(0.9 + 2 * pi/12 * t);   # (2.2) diurnal temperature function
+    T = T_max*gamma + T_min - T_min*gamma
+    return(T)
+  }
+  
+  temps= sapply(t.dat$tmax, FUN="dtr", T_min=t.dat$tmin)
+  temps= as.data.frame(t(temps))
+  temps$period= t.dat$period
+  temps$site= t.dat$site
+  temps$season= t.dat$season
+  
+  #to long format
+  temps1<- melt(temps, id.vars=c("period","site","season"))
+  
+  #density plot
+  ggplot(temps1, aes(x=value, lty=period,color=site))+
+    facet_wrap(~season)+
+    geom_density(lwd=1.2)+scale_color_manual(values=c("orange","blue","darkgreen"))+
+    xlim(0,45)+
+    xlab("Temperature (°C)")+
+    theme_bw(base_size = 18)+theme(legend.position = c(0.6, 0.7))
+  
+  #min, max distributions
+  ggplot(t.dat, aes(x=tmin, lty=period,color=site))+
+    facet_wrap(~season)+
+    geom_density()+scale_color_manual(values=c("blue","orange","darkgreen"))+
+    xlim(-20,30)+
+    xlab("Temperature (°C)")+
+    theme_bw(base_size = 18)
+  
+  ggplot(t.dat, aes(x=tmax, lty=period,color=site))+
+    facet_wrap(~season)+
+    geom_density()+scale_color_manual(values=c("blue","orange","darkgreen"))+
+    xlim(0,45)+
+    xlab("Temperature (°C)")+
+    theme_bw(base_size = 18)
+  
   
 
  
