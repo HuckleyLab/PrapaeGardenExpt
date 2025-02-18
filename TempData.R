@@ -16,7 +16,7 @@ library(readxl)
 #Taylor version: https://github.com/taylorhatcher/WARP2024/tree/main
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
@@ -129,15 +129,6 @@ Tdist.expday.plot <- ggplot(tdat.day[which(!is.na(tdat.day$study)),], aes(x=Tmea
   theme_classic(base_size = 18)+ xlim(0,40)+
   labs(title="experiments, daytime" , x = "T mean (°C)", color = "Study", fill="Study") 
 
-#----------------
-#Save figures
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
-  
-pdf("Fig_Tdist.pdf",height = 6, width = 12)
-Tdist.day.plot + Tdist.expday.plot
-  dev.off()
-
   #==================
 #Plot temperature distribution with selection 
   Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in% c(1999,2024)),]
@@ -161,6 +152,24 @@ Tdist.day.plot + Tdist.expday.plot
   sg$ys= tpc.agg.h$mean
   sg$Year=1999
   
+  #other TPCs
+  #larval TPC
+  #growth rate
+  #Figure 2, mean short term mass-specific growth rate, from kingsolver 2000, 
+  #time period: July 25-30, Aug 12-19, Aug 21-26
+  #g/g/hr
+  temps= c(11,17,23,29,35,40,41)
+  mgr= c(.010, .018, .0435, .0494, .0726, .0388, .0165)
+  gr= as.data.frame(cbind(temps, mgr))
+  
+  #consumption rate
+  #Kingsolver 2000 PBZ
+  # 24h consumption rate for 4th instar, g/g/h
+  temps=c(10, 15, 20, 25, 30, 35, 40, 45)
+  cr= c(.012, .030, .0316, .0577, .0575, .077, .0428, .0085)
+  cr= as.data.frame(cbind(temps, cr))
+  
+  #plot
   plot.sel<- Tdist.plot +
     #add TPC means
     geom_point(data=sg, aes(x=temps, y=ys))+
@@ -168,6 +177,27 @@ Tdist.day.plot + Tdist.expday.plot
   #add selection arrows
   geom_segment(data=sg, aes(x = temps, y = ys, xend = temps, yend = ys+pm.sg/20),
                         arrow = arrow(length = unit(0.5, "cm")), lwd=1.2)
+  
+  #add other TPCs
+  gr$Year= 1999; cr$Year= 1999
+  
+  plot.sel<- plot.sel + 
+    geom_line(data=gr, aes(x=temps, y=mgr))+ geom_point(data=gr, aes(x=temps, y=mgr))+
+    geom_line(data=cr, aes(x=temps, y=cr))+ geom_point(data=cr, aes(x=temps, y=cr))+
+  
+  scale_y_continuous(
+    name = "Growth rate (g/g/h)", 
+    sec.axis = sec_axis(~.x * 1, ##FIX
+                        name = "Density of environmental dataa"))
+  
+  #----------------
+  #Save figures
+  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
+  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
+  
+  pdf("Fig_Tdist.pdf",height = 6, width = 12)
+  plot.sel + Tdist.exp.plot
+  dev.off()
   
   #==================
   #Temp distributions over time  

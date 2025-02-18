@@ -8,7 +8,7 @@ library(nlme)
 library(lme4)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -581,9 +581,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   p.mat<- var(tpc.h[,c("RGR11","RGR17","RGR23","RGR29","RGR35")], na.rm=TRUE)*10^6
   p.mat.m.h <- melt(p.mat)
   
-  #write out matrices
-  write.csv(rbind(g.mat.c,p.mat.c,g.mat,p.mat), "matrices.csv" )
-  
   #-------------------
   #Combine Var matrices
   g.mat.m$type<- "G"; g.mat.m$time<- "current"
@@ -594,6 +591,10 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   var.all$Var1 <- sub("rgr_", "RGR", var.all$Var1)
   var.all$Var2 <- sub("rgr_", "RGR", var.all$Var2)
 
+  #write out matrices
+  write.csv(rbind(g.mat.c,p.mat.c,g.mat,p.mat), "matrices.csv" )
+  write.csv(var.all, "matriceslong.csv" )
+  
     #----------------
   ### Variance Covariance plot
   # Current variances are larger now than in the past for both G and P, particularly at 35C
