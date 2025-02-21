@@ -51,6 +51,21 @@ temp.2024$dt= jday +temp.2024$hr/24 + min/(24*60)
 temp.2024$Date<- format(strptime(temp.2024$datetime, format = "%Y-%m-%d %H:%M:%S"), "%Y-%m-%d")
 temp.2024$Time<- format(strptime(temp.2024$datetime, format = "%Y-%m-%d %H:%M:%S"), "%H:%M")
 
+#2023
+#Data processed here: https://github.com/taylorhatcher/WARP2023Analysis
+temp.2023= read.csv("ToptExpt1_2023.csv") 
+temp.2023$expt<- 1
+temp.2023.2= read.csv("ToptExpt2_2023.csv") 
+temp.2023.2$expt<- 2
+#combine
+temp.2023<- rbind(temp.2023, temp.2023.2)
+
+jday<- as.numeric(format(as.Date(temp.2023$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
+temp.2023$hr<- as.numeric(format(strptime(temp.2023$Date, format = "%Y-%m-%d %H:%M:%S"), "%H"))
+min<- as.numeric(format(strptime(temp.2023$Date, format = "%Y-%m-%d %H:%M:%S"), "%M"))
+temp.2023$dt= jday +temp.2023$hr/24 + min/(24*60)
+
+#------------------------------
 #change to long format and combine
 t1997.l <- melt(temp.1997[,c("dt","Date","Time","hr","Tm1","Tm2","Tm3","Tm4","Tm5","Tm6","Tm7","Tm8","Tm9","Tm10")], id.vars = c("dt","Date","Time","hr"), variable.name = "T")
 t1997.l$Year<- 1997
@@ -63,8 +78,13 @@ t2024.l <- melt(temp.2024[,c("dt","Date","Time", "hr", "Logger1.T1","Logger1.T2"
 t2024.l<- t2024.l[which(!is.na(t2024.l$value)),]
 t2024.l$Year<- 2024
 
+t2023.l <- melt(temp.2023[,c("dt","Date","Time", "hr", "shade1", "sun2", "shade3", "sun4", "sun5", "shade6", "sun7", "shade8")], id.vars = c("dt","Date","Time","hr"), variable.name = "T")
+#drop NAs
+t2023.l<- t2023.l[which(!is.na(t2023.l$value)),]
+t2023.l$Year<- 2023
+
 #combine
-tdat<- rbind(t1997.l, t1999.l, t2024.l)
+tdat<- rbind(t1997.l, t1999.l, t2024.l, t2023.l)
 
 #----------------
 #Plot time series
@@ -108,15 +128,21 @@ Tdist.hr.plot <- ggplot(tdat.mean.hr, aes(x=Tmax, color=factor(Year), fill=facto
 #temperatures during experiments
 # 1999: 15-25 Aug 1999; doy 227-237
 # 2024: June 22-July 4; July 28-Aug 9; doys 173-185, 209-221
+# 2023: 190-202, 212-226
 tdat.mean$doy<- floor(tdat.mean$dt)
 inds1<- which(tdat.mean$Year==1999 & tdat.mean$doy %in% 227:237)
 inds2<- which(tdat.mean$Year==2024 & tdat.mean$doy %in% 173:185)
 inds3<- which(tdat.mean$Year==2024 & tdat.mean$doy %in% 209:221)
+#inds4<- which(tdat.mean$Year==2023 & tdat.mean$doy %in% 190:202)
+#inds5<- which(tdat.mean$Year==2023 & tdat.mean$doy %in% 212:226)
+
 #add study
 tdat.mean$study<- NA
 tdat.mean$study[inds1]<- "Aug 1999"
 tdat.mean$study[inds2]<- "June 2024"
 tdat.mean$study[inds3]<- "July 2024"
+#tdat.mean$study[inds4]<- "July 2023"
+#tdat.mean$study[inds5]<- "Aug 2023"
 
 Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean, color=factor(study), fill=factor(study), group=factor(study))) +  geom_density(alpha=0.5)+
   scale_fill_viridis_d() +scale_color_viridis_d()
@@ -190,14 +216,12 @@ Tdist.expday.plot <- ggplot(tdat.day[which(!is.na(tdat.day$study)),], aes(x=Tmea
     sec.axis = sec_axis(~.x * 1, ##FIX
                         name = "Density of environmental dataa"))
   
-  #----------------
-  #Save figures
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
+  #==================
+  #Estimate growth rate over temperatures
   
-  pdf("Fig_Tdist.pdf",height = 6, width = 12)
-  plot.sel + Tdist.exp.plot
-  dev.off()
+  
+  
+  
   
   #==================
   #Temp distributions over time  
@@ -217,7 +241,7 @@ Tdist.expday.plot <- ggplot(tdat.day[which(!is.na(tdat.day$study)),], aes(x=Tmea
   t.dat$month= round(month(as.POSIXlt(t.dat$DATE)))
   t.dat$year= year(as.POSIXlt(t.dat$DATE))
   #restrict to growing season
-  t.dat= t.dat[which(t.dat$month %in% c(4,5,7,8)),] 
+  t.dat= t.dat[which(t.dat$month %in% c(6,7,8)),] 
   
   #code season
   #month 3,4 vs 7,8
@@ -246,34 +270,54 @@ Tdist.expday.plot <- ggplot(tdat.day[which(!is.na(tdat.day$study)),], aes(x=Tmea
   temps= as.data.frame(t(temps))
   temps$period= t.dat$period
   temps$site= t.dat$site
-  temps$season= t.dat$season
+  #temps$season= t.dat$season
+  temps$month= t.dat$month
   
   #to long format
-  temps1<- melt(temps, id.vars=c("period","site","season"))
+  temps1<- melt(temps, id.vars=c("period","site","month"))
+  #make labels
+  temps1$time<- NA
+  temps1$time[which(temps1$period=="initial" & temps1$month==6)]<- "June 1991-1994"
+  temps1$time[which(temps1$period=="initial" & temps1$month==7)]<- "July 1991-1994"
+  temps1$time[which(temps1$period=="initial" & temps1$month==8)]<- "August 1991-1994"
+  
+  temps1$time[which(temps1$period=="recent" & temps1$month==6)]<- "June 2016-2020"
+  temps1$time[which(temps1$period=="recent" & temps1$month==7)]<- "July 2016-2020"
+  temps1$time[which(temps1$period=="initial" & temps1$month==8)]<- "August 2016-2020"
   
   #density plot
-  ggplot(temps1, aes(x=value, lty=period,color=site))+
-    facet_wrap(~season)+
-    geom_density(lwd=1.2)+scale_color_manual(values=c("orange","blue","darkgreen"))+
+  month.plot<- ggplot(temps1, aes(x=value, color=factor(month), fill=factor(month), lty=period, group=time))+
+    #facet_wrap(~month)+
+    geom_density(lwd=1.2)+scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)+
     xlim(0,45)+
     xlab("Temperature (°C)")+
-    theme_bw(base_size = 18)+theme(legend.position = c(0.6, 0.7))
+    theme_bw(base_size = 18)+theme(legend.position = c(0.8, 0.6))
   
   #min, max distributions
-  ggplot(t.dat, aes(x=tmin, lty=period,color=site))+
-    facet_wrap(~season)+
-    geom_density()+scale_color_manual(values=c("blue","orange","darkgreen"))+
+  ggplot(t.dat, aes(x=tmin, color=period, fill=period))+
+    facet_wrap(~month)+
+    geom_density()+scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)+
     xlim(-20,30)+
     xlab("Temperature (°C)")+
     theme_bw(base_size = 18)
   
-  ggplot(t.dat, aes(x=tmax, lty=period,color=site))+
-    facet_wrap(~season)+
-    geom_density()+scale_color_manual(values=c("blue","orange","darkgreen"))+
+  ggplot(t.dat, aes(x=tmax, color=period, fill=period))+
+    facet_wrap(~month)+
+    geom_density()+scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)+
     xlim(0,45)+
     xlab("Temperature (°C)")+
     theme_bw(base_size = 18)
   
+  #----------------
+  #Save figures
+  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
+  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
   
-
+  design <- "AB
+              CC"
+  
+  pdf("Fig_Tdist.pdf",height = 10, width = 10)
+  plot.sel + Tdist.exp.plot + month.plot +plot_layout(design=design) 
+  dev.off()
  
+  #=============================
