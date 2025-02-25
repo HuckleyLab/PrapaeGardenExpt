@@ -7,6 +7,7 @@ library(viridis)
 library(nlme)
 library(lme4)
 library(stringr)
+library(ggridges)
 
 # Load required libraries
 library(lubridate)
@@ -16,7 +17,7 @@ library(readxl)
 #Taylor version: https://github.com/taylorhatcher/WARP2024/tree/main
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
@@ -286,12 +287,11 @@ Tdist.expday.plot <- ggplot(tdat.day[which(!is.na(tdat.day$study)),], aes(x=Tmea
   temps1$time[which(temps1$period=="initial" & temps1$month==8)]<- "August 2016-2020"
   
   #density plot
-  month.plot<- ggplot(temps1, aes(x=value, color=factor(month), fill=factor(month), lty=period, group=time))+
-    #facet_wrap(~month)+
-    geom_density(lwd=1.2)+scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)+
-    xlim(0,45)+
-    xlab("Temperature (°C)")+
-    theme_bw(base_size = 18)+theme(legend.position = c(0.8, 0.6))
+  month.plot<- ggplot(temps1, aes(x=value, y=month, color=factor(month), fill=factor(month), lty=period, group=time))+
+    geom_density_ridges(lwd=1.2)+scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)+
+    xlim(5,40)+ylim(5.9, 9.5)+
+    xlab("Temperature (°C)")+ guides(fill="none", color="none")+
+    theme_bw(base_size = 18)+theme(legend.position = c(0.9, 0.8))
   
   #min, max distributions
   ggplot(t.dat, aes(x=tmin, color=period, fill=period))+
@@ -314,9 +314,10 @@ Tdist.expday.plot <- ggplot(tdat.day[which(!is.na(tdat.day$study)),], aes(x=Tmea
   if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
   
   design <- "AB
+              AB
               CC"
   
-  pdf("Fig_Tdist.pdf",height = 10, width = 10)
+  pdf("Fig_Tdist.pdf",height = 8, width = 10)
   plot.sel + Tdist.exp.plot + month.plot +plot_layout(design=design) 
   dev.off()
  
