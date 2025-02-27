@@ -111,7 +111,7 @@ tpc.plot= tpc.plot +
 tpc.agg <- tpc.l %>% 
   group_by(temp) %>% 
   dplyr::summarise(mean = mean(value, na.rm = TRUE),
-            se = sd(value, na.rm = TRUE)/length(value) )
+            se = sd(value, na.rm = TRUE)/sqrt(length(value)) )
 
 #add means
 tpc.plot= tpc.plot + 
@@ -421,6 +421,31 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   dev.off()
   
   #-------
+  # Plot trait changes
+  
+  #combine wide format
+  tpc.wc<- tpc[,c("rgr_11", "rgr_17", "rgr_23", "rgr_29", "rgr_35", "surv", "puptime", "pupal_massmg", "FecEggCount","expt")]
+  names(tpc.wc)<- c("RGR11", "RGR17", "RGR23", "RGR29", "RGR35", "Pupated", "Time.to.Pupation", "Pupa.wt", "Fecundity","expt")
+  tpc.wc$tim_per<- "initial"
+  
+  tpc.wp<- tpc.h[,c("RGR11", "RGR17", "RGR23", "RGR29", "RGR35", "Pupated", "Time.to.Pupation", "Pupa.wt", "Fecundity","expt")]
+  tpc.wp$tim_per<- "recent"
+  
+  tpc.w<- rbind(tpc.wc, tpc.wp)
+  
+  #mass
+  plot.mass<- ggplot(tpc.w, aes(x=Pupa.wt,color=expt, group=expt)) + 
+    geom_density(aes(fill=expt), alpha=0.5)+
+    ylab("Density") +xlab("pupal mass (mg)")+
+    scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)
+  
+  #pupal time
+  plot.pt<- ggplot(tpc.w, aes(x=Time.to.Pupation,color=expt, group=expt)) + 
+    geom_density(aes(fill=expt), alpha=0.5)+
+    ylab("Density") +xlab("pupal mass (mg)")+
+    scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)
+  
+  #-------
   # Plot correlations
   
   plot.cor1<- ggplot(tpc.gl.all, aes(x=pupal_massmg,y=puptime, color=expt)) + 
@@ -465,6 +490,8 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, random=~1|FEMALE, data = na.omit(tpcm[tpcm$expt=="june",]))
   #mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, random=~1|FEMALE, data = na.omit(tpcm[tpcm$expt=="july",]))
   anova(mod.lmer)
+  
+  #ESTIMATE SELECTION GRADIENT
   
   #----
   #Combine across time and analyze 

@@ -108,11 +108,11 @@ Tdist.plot <- ggplot(tdat.mean[which(tdat.mean$dt>223 & tdat.mean$dt<238),], aes
   labs(x = "T mean (°C)", color = "Year", fill="Year") 
 
 #restrict to daylight 223 238 Aug 11-26; Aug 11: 6,8:30; Aug 26: 6:20-8
-tdat.mean$dec.dt<- tdat.mean$dt - floor(tdat.mean$dt)
-tdat.day<- tdat.mean[which(tdat.mean$dec.dt>0.25 & tdat.mean$dec.dt<0.85),]
-tdat.day<- tdat.day[which(tdat.day$dt>223 & tdat.day$dt<238),]
+#tdat.mean$dec.dt<- tdat.mean$dt - floor(tdat.mean$dt)
+#tdat.day<- tdat.mean[which(tdat.mean$dec.dt>0.25 & tdat.mean$dec.dt<0.85),]
+#tdat.day<- tdat.day[which(tdat.day$dt>223 & tdat.day$dt<238),]
 
-Tdist.day.plot <- ggplot(tdat.day, aes(x=Tmean, color=factor(Year), fill=factor(Year), group=factor(Year))) +  geom_density(alpha=0.5)+
+Tdist.day.plot <- ggplot(tdat.mean, aes(x=Tmean, color=factor(Year), fill=factor(Year), group=factor(Year))) +  geom_density(alpha=0.5)+
   scale_fill_viridis_d() +scale_color_viridis_d()+
   theme_classic(base_size = 18)+ xlim(0,40)+
   labs(title="doy 223-238, daytime" , x = "T mean (°C)", color = "Year", fill="Year") 
@@ -149,12 +149,12 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
   scale_fill_viridis_d() +scale_color_viridis_d()
 
 # just daylight
-tdat.day<- tdat.mean[which(tdat.mean$dec.dt>0.25 & tdat.mean$dec.dt<0.85),]
+#tdat.day<- tdat.mean[which(tdat.mean$dec.dt>0.25 & tdat.mean$dec.dt<0.85),]
 
-Tdist.expday.plot <- ggplot(tdat.day[which(!is.na(tdat.day$study)),], aes(x=Tmean, color=factor(study), fill=factor(study), group=factor(study))) +  geom_density(alpha=0.5)+
+Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean, color=factor(study), fill=factor(study), group=factor(study))) +  geom_density(alpha=0.5)+
   scale_fill_viridis_d() +scale_color_viridis_d()+
   theme_classic(base_size = 18)+ xlim(0,40)+
-  labs(title="experiments, daytime" , x = "T mean (°C)", color = "Study", fill="Study") 
+  labs(x = "T mean (°C)", color = "Study", fill="Study") 
 
   #==================
 #Plot temperature distribution with selection 
@@ -164,7 +164,6 @@ Tdist.expday.plot <- ggplot(tdat.day[which(!is.na(tdat.day$study)),], aes(x=Tmea
     scale_fill_viridis_d() +scale_color_viridis_d()+
     theme_classic(base_size = 18)+
     labs(x = "T mean (°C)", color = "Year", fill="Year") 
-  
   
   #compute from GardenExpt2024
   #tpc.agg.h
@@ -220,7 +219,7 @@ Tdist.expday.plot <- ggplot(tdat.day[which(!is.na(tdat.day$study)),], aes(x=Tmea
   #==================
   #Estimate growth rate over temperatures
   
-  
+  #Fit TPCs
   
   
   
@@ -260,7 +259,7 @@ Tdist.expday.plot <- ggplot(tdat.day[which(!is.na(tdat.day$study)),], aes(x=Tmea
   #combine
   t.dat= rbind(t.dat1,t.dat2)
   
-  #just day
+  #dtr
   dtr=function(T_max, T_min, t=7:18){
     gamma= 0.44 - 0.46* sin(0.9 + pi/12 * t)+ 0.11 * sin(0.9 + 2 * pi/12 * t);   # (2.2) diurnal temperature function
     T = T_max*gamma + T_min - T_min*gamma
