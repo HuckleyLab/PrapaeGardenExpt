@@ -8,7 +8,7 @@ library(nlme)
 library(lme4)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -365,10 +365,25 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #tpc.gl.all<- tpc.gl.all[-which(is.na(tpc.gl.all[,"pupal_massmg"])),]
   #tpc.gl.all<- tpc.gl.all[-which(is.na(tpc.gl.all[,"temp"])),]
   
+  #-------------------
+  #Estimate selection
+  #Kingsolver and Gomulkiewicz 2003
+ # Then Z(T) is the proportion of total growth that results from growth at a particular temperature, and is simply the weighted average of growth rate at temperature T and the fraction of time spent at that temperature, f(T):
+
+ # linear selection gradient (b), which relates variation in the trait (in units of standard de- viation of the trait) to variation in relative fitness w (where mean fitness in a population or sample is de- fined to equal 1)  
+  
+  #Kingsolver, Gomulkiewicz, and Carter 2001
+#  The components of a selection gradient represent the dir- ect strength of selection on each trait, adjusting for the phenotypic correlations among the traits; they can be readily estimated with partial regression analyses,
+
+  z = {RGR(11◦C),RGR(17 C), RGR(23 C), RGR(29 C), RGR(35 C)}
+  
+  #------------------
+  #Plot
   plot.pm.b<- ggplot(tpc.gl.all, aes(x=value,y=pupal_massmg)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
-    ylab("Pupal mass (mg)") +xlab("RGR (g/g/h)")
+    ylab("Pupal mass (mg)") +xlab("RGR (g/g/h)")+
+    theme_bw()
   
   plot.surv.b<- ggplot(tpc.gl.all, aes(x=value,y=surv)) + 
     facet_grid(expt~temp)+
