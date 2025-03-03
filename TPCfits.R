@@ -111,15 +111,17 @@ label_facets_num <- function(string){
 #Relate to selection estimates: determine Topt and plot against fitness components, only pupal mass was significant?
 
 #compare to empirical data
-setwd('/Volumes/GoogleDrive/My Drive/Buckley/Work/Proposals/NSF_ORCC/historical/')
+if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/My Drive/Buckley/Work/Proposals/NSF_ORCC/historical/")
+if(desktop=="n") setwd("/Users/lbuckley/Library/CloudStorage/GoogleDrive-lbuckley@uw.edu/My Drive/Buckley/Work/Proposals/NSF_ORCC/historical/")
+
 pr= read.csv("PrapaeUW.Seln2.1999.Combineddata.OPUS2021.csv")
 
 #plot TPCs
 pr1= pr[,c("Mom","UniID", "Mi", "RGR11", "RGR17", "RGR23", "RGR29", "RGR35")]
 pr1= melt(pr1, id.vars=c("Mom","UniID", "Mi"), variable.name="temp", value.name="rgr")           
-pr1$temperature= gsub('RGR', '', pr1$variable)
+pr1$temperature= gsub('RGR', '', pr1$temp)
 
-ggplot(pr1, aes(x=temperature, y=value, color=UniID, group=UniID))+geom_line()+
+ggplot(pr1, aes(x=temperature, y=rgr, color=UniID, group=UniID))+geom_line()+geom_point()+
   facet_wrap(~Mom)
 
 #fit TPC
@@ -144,14 +146,10 @@ tpc.p= matrix(NA, nrow=length(ids), ncol=3)
 
 for(id.k in 1:length(ids)){
   
-  #gr= pr1[pr1$Mom==ids[id.k],c("temperature","value")]
-  gr= pr1[pr1$UniID==ids[id.k],c("temperature","value")]
+  gr= pr1[pr1$UniID==ids[id.k],c("temperature","rgr")]
   colnames(gr)=c("temp","rate")
   gr$temp= as.numeric(gr$temp)
   gr= na.omit(gr)
-  
-  #gr.fit= try( fitG(x=gr$temp, y=gr$rate, mu=31, sig=8, scale= 0.06) )
-  #tpc.p[id.k,]=gr.fit$par
   
   tryCatch({ gr.fit<- fit.tpcs(gr) 
   tpc.p[id.k,]<-coef(gr.fit) },
