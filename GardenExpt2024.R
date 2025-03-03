@@ -375,7 +375,7 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #Kingsolver, Gomulkiewicz, and Carter 2001
 #  The components of a selection gradient represent the dir- ect strength of selection on each trait, adjusting for the phenotypic correlations among the traits; they can be readily estimated with partial regression analyses,
 
-  z = {RGR(11◦C),RGR(17 C), RGR(23 C), RGR(29 C), RGR(35 C)}
+ # z = {RGR(11◦C),RGR(17 C), RGR(23 C), RGR(29 C), RGR(35 C)}
   
   #------------------
   #Plot

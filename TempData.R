@@ -17,7 +17,7 @@ library(readxl)
 #Taylor version: https://github.com/taylorhatcher/WARP2024/tree/main
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
@@ -209,7 +209,7 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
   
   plot.sel<- plot.sel + 
     geom_line(data=gr, aes(x=temps, y=mgr))+ geom_point(data=gr, aes(x=temps, y=mgr))+
-    geom_line(data=cr, aes(x=temps, y=cr))+ geom_point(data=cr, aes(x=temps, y=cr))+
+    #geom_line(data=cr, aes(x=temps, y=cr))+ geom_point(data=cr, aes(x=temps, y=cr))+
   
   scale_y_continuous(
     name = "Growth rate (g/g/h)", 
