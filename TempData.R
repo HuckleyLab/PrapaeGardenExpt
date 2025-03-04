@@ -17,7 +17,7 @@ library(readxl)
 #Taylor version: https://github.com/taylorhatcher/WARP2024/tree/main
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
@@ -157,6 +157,7 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
   labs(x = "T mean (°C)", color = "Study", fill="Study") 
 
   #==================
+
 #Plot temperature distribution with selection 
   Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in% c(1999,2024)),]
   
@@ -165,8 +166,16 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
     theme_classic(base_size = 18)+
     labs(x = "T mean (°C)", color = "Year", fill="Year") 
   
-  #compute from GardenExpt2024
-  #tpc.agg.h
+  #load and plot short term growth rate
+  #run TPCfits to get data
+  tpc.agg.f <- as.data.frame(tpc.agg.f)
+  tpc.agg.f$Year= 1999
+  
+  temps<- 1:50
+  tpc.dat<- cbind(temps, beta_2012(temp = temps, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5]))
+  colnames(tpc.dat)<- c("temp", "rate")
+  tpc.dat <- as.data.frame(tpc.dat)
+  tpc.dat$Year= 1999
   
   #Figure 2, mean short term mass-specific growth rate, from kingsolver 2000, 
   #selection gradient
@@ -178,49 +187,30 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
   sg$ys= tpc.agg.h$mean
   sg$Year=1999
   
-  #other TPCs
-  #larval TPC
-  #growth rate
-  #Figure 2, mean short term mass-specific growth rate, from kingsolver 2000, 
-  #time period: July 25-30, Aug 12-19, Aug 21-26
-  #g/g/hr
-  temps= c(11,17,23,29,35,40,41)
-  mgr= c(.010, .018, .0435, .0494, .0726, .0388, .0165)
-  gr= as.data.frame(cbind(temps, mgr))
-  
-  #consumption rate
-  #Kingsolver 2000 PBZ
-  # 24h consumption rate for 4th instar, g/g/h
-  temps=c(10, 15, 20, 25, 30, 35, 40, 45)
-  cr= c(.012, .030, .0316, .0577, .0575, .077, .0428, .0085)
-  cr= as.data.frame(cbind(temps, cr))
-  
   #plot
   plot.sel<- Tdist.plot +
     #add TPC means
+    geom_point(data=tpc.agg.f, aes(x=temp, y=mean))+
+    #add beta fit
+    geom_line(data=tpc.dat, aes(x=temp, y=rate))+
+    #add 1999 feeding data
     geom_point(data=sg, aes(x=temps, y=ys))+
     geom_line(data=sg, aes(x=temps, y=ys))+
-  #add selection arrows
-  geom_segment(data=sg, aes(x = temps, y = ys, xend = temps, yend = ys+pm.sg/20),
-                        arrow = arrow(length = unit(0.5, "cm")), lwd=1.2)
-  
-  #add other TPCs
-  gr$Year= 1999; cr$Year= 1999
-  
-  plot.sel<- plot.sel + 
-    geom_line(data=gr, aes(x=temps, y=mgr))+ geom_point(data=gr, aes(x=temps, y=mgr))+
-    #geom_line(data=cr, aes(x=temps, y=cr))+ geom_point(data=cr, aes(x=temps, y=cr))+
-  
+    #add selection arrows
+    geom_segment(data=sg, aes(x = temps, y = ys, xend = temps, yend = ys+pm.sg/20),
+                 arrow = arrow(length = unit(0.5, "cm")), lwd=1.2)+
+  #add additional axis
   scale_y_continuous(
     name = "Growth rate (g/g/h)", 
-    sec.axis = sec_axis(~.x * 1, ##FIX
-                        name = "Density of environmental dataa"))
+    sec.axis = sec_axis(~.x * 1, 
+                        name = "Density of environmental data"))
   
   #==================
   #Estimate growth rate over temperatures
   
-  #Fit TPCs
   
+  
+  beta_2012(temp = temps, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5])
   
   
   #==================

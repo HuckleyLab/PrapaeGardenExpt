@@ -1,8 +1,17 @@
 # load packages
+library(ggplot2)
+library(data.table)
+library(dplyr)
+library(reshape2)
+library(viridis)
+
 library(rTPC)
 library(nls.multstart)
 library(broom)
 library(tidyverse)
+
+#toggle between desktop (y) and laptop (n)
+desktop<- "y"
 
 #other TPCs
 #larval TPC
@@ -16,6 +25,32 @@ gr= as.data.frame(cbind(temps, mgr))
 
 colnames(gr)=c("temp","rate")
 d=gr
+
+#--------------------
+#load constant temperature data 
+
+if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/My Drive/Buckley/Work/WARP/projects/TPCconstant/out/")
+if(desktop=="n") setwd("/Users/lbuckley/Library/CloudStorage/GoogleDrive-lbuckley@uw.edu/My Drive/Buckley/Work/WARP/projects/TPCconstant/out/")
+
+tpc<- read.csv("PastPresentFilteredConstantTpc2024.csv")
+
+#restrict to 6hrs and 4th instar, past
+tpc1<- tpc[which(tpc$time.per=="past" & tpc$active=="y" & tpc$instar==4 & tpc$time>0.5),]
+#restrict to 6 hrs
+tpc1<- tpc1[which(tpc1$time>5 & tpc1$time<10),]
+
+#estimates means across temperatures
+tpc.agg.f <- tpc1 %>%
+  group_by(temp) %>% 
+  dplyr::summarise(
+    mean = mean(rgrlog, na.rm = TRUE),
+    n= length(rgrlog),
+    se = sd(rgrlog, na.rm = TRUE) / sqrt(n)
+  )
+
+#format data for analysis
+d= tpc1[,c("temp","rgrlog")]
+colnames(d)<- c("temp", "rate")
 
 # write function to label ggplot2 panels
 label_facets_num <- function(string){
@@ -102,70 +137,8 @@ label_facets_num <- function(string){
   return(string)
 }
 
-#----------------------------
-##P. rapae 1999 selection data
-# rgr at each temperature
-# survival to pupation, time to pupation, pupal mass
-#survive to eclosion, time to eclosion, adult mass
-#number of eggs laid
-#Relate to selection estimates: determine Topt and plot against fitness components, only pupal mass was significant?
+#plot TPC
+tpc.c<- summary(mod)$coefficients
+beta.params<- tpc.c[,1]
 
-#compare to empirical data
-if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/My Drive/Buckley/Work/Proposals/NSF_ORCC/historical/")
-if(desktop=="n") setwd("/Users/lbuckley/Library/CloudStorage/GoogleDrive-lbuckley@uw.edu/My Drive/Buckley/Work/Proposals/NSF_ORCC/historical/")
-
-pr= read.csv("PrapaeUW.Seln2.1999.Combineddata.OPUS2021.csv")
-
-#plot TPCs
-pr1= pr[,c("Mom","UniID", "Mi", "RGR11", "RGR17", "RGR23", "RGR29", "RGR35")]
-pr1= melt(pr1, id.vars=c("Mom","UniID", "Mi"), variable.name="temp", value.name="rgr")           
-pr1$temperature= gsub('RGR', '', pr1$temp)
-
-ggplot(pr1, aes(x=temperature, y=rgr, color=UniID, group=UniID))+geom_line()+geom_point()+
-  facet_wrap(~Mom)
-
-#fit TPC
-#load FitGaussian
-
-fitG =
-  function(x,y,mu,sig,scale){
-    
-    f = function(p){
-      d = p[3]*dnorm(x,mean=p[1],sd=p[2])
-      sum((d-y)^2)
-    }
-    
-    optim(c(mu,sig,scale),f)
-  }
-
-ids= unique(pr1$UniID)
-#by mom
-#ids= unique(pr1$Mom)
-
-tpc.p= matrix(NA, nrow=length(ids), ncol=3)
-
-for(id.k in 1:length(ids)){
-  
-  gr= pr1[pr1$UniID==ids[id.k],c("temperature","rgr")]
-  colnames(gr)=c("temp","rate")
-  gr$temp= as.numeric(gr$temp)
-  gr= na.omit(gr)
-  
-  tryCatch({ gr.fit<- fit.tpcs(gr) 
-  tpc.p[id.k,]<-coef(gr.fit) },
-  error=function(e){})
-  
-}
-#fix so Topt can be >35
-
-#plot TPCs
-pr$Topt= tpc.p[match(pr$UniID,ids), 2]
-
-#plot selection functions
-ggplot(pr, aes(x=Topt, y=Time.to.Pupation, color=UniID, group=UniID))+geom_point()
-ggplot(pr, aes(x=Topt, y=Pupa.wt, color=UniID, group=UniID))+geom_point()
-ggplot(pr, aes(x=Topt, y=Butt..Wt, color=UniID, group=UniID))+geom_point()
-ggplot(pr, aes(x=Topt, y=Fecundity, color=UniID, group=UniID))+geom_point()
-
-#============================
-
+plot(1:50, beta_2012(temp = 1:50, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5]))
