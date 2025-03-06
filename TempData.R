@@ -17,7 +17,7 @@ library(readxl)
 #Taylor version: https://github.com/taylorhatcher/WARP2024/tree/main
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
@@ -127,7 +127,10 @@ Tdist.hr.plot <- ggplot(tdat.mean.hr, aes(x=Tmax, color=factor(Year), fill=facto
 
 #-------------------------
 #temperatures during experiments
-# 1999: 15-25 Aug 1999; doy 227-237
+# 1999: 15-25 Aug 1999; doy 227-237, 
+#KingsolverGenetica2001 says July 28-Aug 5; doy 209-217
+# KingsolverGomulkiewicz2003 uses 195 to 217; check Fig 3 distribution
+
 # 2024: June 22-July 4; July 28-Aug 9; doys 173-185, 209-221
 # 2023: 190-202, 212-226
 tdat.mean$doy<- floor(tdat.mean$dt)
@@ -216,9 +219,13 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
   #==================
   #Estimate growth rate over temperatures
   
-  Tplot
+  Tplot$rgr<- beta_2012(temp = Tplot$Tmean, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5])
   
-  beta_2012(temp = temps, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5])
+  
+  RGRdist.plot <- ggplot(Tplot, aes(x=rgr, color=factor(Year), fill=factor(Year), group=factor(Year))) +  geom_density(alpha=0.5)+
+    scale_fill_viridis_d() +scale_color_viridis_d()+
+    theme_classic(base_size = 18)+
+    labs(x = "Growth rate (g/g/h)", color = "Year", fill="Year") 
   
   
   #==================
