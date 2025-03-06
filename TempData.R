@@ -17,7 +17,7 @@ library(readxl)
 #Taylor version: https://github.com/taylorhatcher/WARP2024/tree/main
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
@@ -168,8 +168,8 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
   
   #load and plot short term growth rate
   #run TPCfits to get data
-  tpc.agg.f <- as.data.frame(tpc.agg.f)
-  tpc.agg.f$Year= 1999
+  tpc.agg.f2 <- as.data.frame(tpc.agg.f2)
+  tpc.agg.f2$Year= 1999
   
   temps<- 1:50
   tpc.dat<- cbind(temps, beta_2012(temp = temps, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5]))
@@ -183,19 +183,27 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
   temps= c(11,17,23,29,35)
   pm.sg= c(0.338,0.182, 0.190, -0.233, -0.217) #selection gradient for pupal mass
   sg= as.data.frame(cbind(temps, pm.sg))
-  #add y values
-  sg$ys= tpc.agg.h$mean
   sg$Year=1999
+  #add y values from GardenExpt2024.R code
+  tpc.agg.h <- tpc.lh %>% 
+    group_by(temp) %>% 
+    dplyr::summarise(mean = mean(value, na.rm = TRUE),
+                     se = sd(value, na.rm = TRUE)/length(value) )
+  tpc.agg.h$Year<- 1999
+  tpc.agg.h<- as.data.frame(tpc.agg.h)
+  #past tpc data
+  inds<- match(sg$temps, tpc.agg.h$temp)
+  sg$ys<- tpc.agg.h$mean[inds]
   
   #plot
   plot.sel<- Tdist.plot +
     #add TPC means
-    geom_point(data=tpc.agg.f, aes(x=temp, y=mean))+
+    geom_point(data=tpc.agg.f2, aes(x=temp, y=mean))+
     #add beta fit
     geom_line(data=tpc.dat, aes(x=temp, y=rate))+
     #add 1999 feeding data
-    geom_point(data=sg, aes(x=temps, y=ys))+
-    geom_line(data=sg, aes(x=temps, y=ys))+
+    geom_point(data=tpc.agg.h, aes(x=temp, y=mean))+
+    geom_line(data=tpc.agg.h, aes(x=temp, y=mean))+
     #add selection arrows
     geom_segment(data=sg, aes(x = temps, y = ys, xend = temps, yend = ys+pm.sg/20),
                  arrow = arrow(length = unit(0.5, "cm")), lwd=1.2)+
@@ -208,7 +216,7 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
   #==================
   #Estimate growth rate over temperatures
   
-  
+  Tplot
   
   beta_2012(temp = temps, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5])
   

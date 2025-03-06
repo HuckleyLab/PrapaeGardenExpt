@@ -11,7 +11,7 @@ library(broom)
 library(tidyverse)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 #other TPCs
 #larval TPC
@@ -40,7 +40,7 @@ tpc1<- tpc[which(tpc$time.per=="past" & tpc$active=="y" & tpc$instar==4 & tpc$ti
 tpc1<- tpc1[which(tpc1$time>5 & tpc1$time<10),]
 
 #estimates means across temperatures
-tpc.agg.f <- tpc1 %>%
+tpc.agg.f2 <- tpc1 %>%
   group_by(temp) %>% 
   dplyr::summarise(
     mean = mean(rgrlog, na.rm = TRUE),
