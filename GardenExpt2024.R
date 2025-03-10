@@ -365,18 +365,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #tpc.gl.all<- tpc.gl.all[-which(is.na(tpc.gl.all[,"pupal_massmg"])),]
   #tpc.gl.all<- tpc.gl.all[-which(is.na(tpc.gl.all[,"temp"])),]
   
-  #-------------------
-  #Estimate selection
-  #Kingsolver and Gomulkiewicz 2003
- # Then Z(T) is the proportion of total growth that results from growth at a particular temperature, and is simply the weighted average of growth rate at temperature T and the fraction of time spent at that temperature, f(T):
-
- # linear selection gradient (b), which relates variation in the trait (in units of standard de- viation of the trait) to variation in relative fitness w (where mean fitness in a population or sample is de- fined to equal 1)  
-  
-  #Kingsolver, Gomulkiewicz, and Carter 2001
-#  The components of a selection gradient represent the dir- ect strength of selection on each trait, adjusting for the phenotypic correlations among the traits; they can be readily estimated with partial regression analyses,
-
- # z = {RGR(11◦C),RGR(17 C), RGR(23 C), RGR(29 C), RGR(35 C)}
-  
   #------------------
   #Plot
   plot.pm.b<- ggplot(tpc.gl.all, aes(x=value,y=pupal_massmg)) + 
@@ -434,6 +422,24 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   pdf("FigS3_GardenEggCount.pdf",height = 8, width = 11)
   plot.ec.b
   dev.off()
+  
+  #-------------------
+  #Estimate selection
+  #Kingsolver and Gomulkiewicz 2003
+  # linear selection gradient (b), which relates variation in the trait (in units of standard deviation of the trait) to variation in relative fitness w (where mean fitness in a population or sample is defined to equal 1)  
+  
+  #Kingsolver, Gomulkiewicz, and Carter 2001
+  #  The components of a selection gradient represent the direct strength of selection on each trait, adjusting for the phenotypic correlations among the traits; they can be readily estimated with partial regression analyses,
+  
+  #ESTIMATE SELECTION GRADIENT
+  #normalize response to +- 1SD
+  
+  #tpc.gl
+  #tpc.gl.h
+  
+
+  #tpc.gl.all
+  
   
   #-------
   # Plot trait changes
@@ -505,8 +511,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, random=~1|FEMALE, data = na.omit(tpcm[tpcm$expt=="june",]))
   #mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, random=~1|FEMALE, data = na.omit(tpcm[tpcm$expt=="july",]))
   anova(mod.lmer)
-  
-  #ESTIMATE SELECTION GRADIENT
   
   #----
   #Combine across time and analyze 

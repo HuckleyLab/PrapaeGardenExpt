@@ -127,14 +127,15 @@ Tdist.hr.plot <- ggplot(tdat.mean.hr, aes(x=Tmax, color=factor(Year), fill=facto
 
 #-------------------------
 #temperatures during experiments
-# 1999: 15-25 Aug 1999; doy 227-237, 
-#KingsolverGenetica2001 says July 28-Aug 5; doy 209-217
+# OPUS 1999: 15-25 Aug 1999; doy 227-237, 
+# KingsolverGenetica2001 says July 28-Aug 5; doy 209-217 (Fig 8)
 # KingsolverGomulkiewicz2003 uses 195 to 217; check Fig 3 distribution
 
 # 2024: June 22-July 4; July 28-Aug 9; doys 173-185, 209-221
 # 2023: 190-202, 212-226
 tdat.mean$doy<- floor(tdat.mean$dt)
 inds1<- which(tdat.mean$Year==1999 & tdat.mean$doy %in% 227:237)
+#inds1<- which(tdat.mean$Year==1999 & tdat.mean$doy %in% 209:217)
 inds2<- which(tdat.mean$Year==2024 & tdat.mean$doy %in% 173:185)
 inds3<- which(tdat.mean$Year==2024 & tdat.mean$doy %in% 209:221)
 #inds4<- which(tdat.mean$Year==2023 & tdat.mean$doy %in% 190:202)
@@ -161,8 +162,14 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
 
   #==================
 
-#Plot temperature distribution with selection 
-  Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in% c(1999,2024)),]
+#Plot temperature distribution with selection during study period
+# OPUS 1999: 15-25 Aug 1999; doy 227-237, 
+# KingsolverGenetica2001 says July 28-Aug 5; doy 209-217 (Fig 8)
+# KingsolverGomulkiewicz2003 uses 195 to 217; check Fig 3 distribution
+#Compare to Figure 8 in KingsolverGenetica2001
+
+Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in% c(1999,2024)),]
+#Tplot<- tdat.mean[which(tdat.mean$dt>209 & tdat.mean$dt<217 & tdat.mean$Year %in% c(1999,2024)),]
   
   Tdist.plot <- ggplot(Tplot, aes(x=Tmean, color=factor(Year), fill=factor(Year), group=factor(Year))) +  geom_density(alpha=0.5)+
     scale_fill_viridis_d() +scale_color_viridis_d()+
@@ -221,11 +228,42 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
   
   Tplot$rgr<- beta_2012(temp = Tplot$Tmean, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5])
   
-  
+  #plot growth rate distributions
   RGRdist.plot <- ggplot(Tplot, aes(x=rgr, color=factor(Year), fill=factor(Year), group=factor(Year))) +  geom_density(alpha=0.5)+
     scale_fill_viridis_d() +scale_color_viridis_d()+
     theme_classic(base_size = 18)+
     labs(x = "Growth rate (g/g/h)", color = "Year", fill="Year") 
+  
+  #Plot like Fig 3 in KingsolverGomulkiewicz2003
+  #fraction time spent at each temperature
+  #1999
+  thist= unlist(Tplot[which(Tplot$Year==1999),"Tmean"])
+  thist= hist(thist, freq=TRUE, breaks=floor(min(thist)):ceiling(max(thist)) )
+  
+  #Then Z(T) is the proportion of total growth that results from growth at a particular temperature, and is simply the weighted average of growth rate at temperature T and the fraction of time spent at that temperature, f(T):
+  thist1= thist$density*beta_2012(temp = thist$mids, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5])
+  ZT= thist1 / sum(thist1)
+  ZT= as.data.frame(cbind(temp=thist$mids, z= ZT, Year=1999))
+  
+  #2024 calculation
+  thist= unlist(Tplot[which(Tplot$Year==2024),"Tmean"])
+  thist= hist(thist, freq=TRUE, breaks=floor(min(thist)):ceiling(max(thist)) )
+  
+  #Then Z(T) is the proportion of total growth that results from growth at a particular temperature, and is simply the weighted average of growth rate at temperature T and the fraction of time spent at that temperature, f(T):
+  thist1= thist$density*beta_2012(temp = thist$mids, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5])
+  ZTp= thist1 / sum(thist1)
+  ZTp= as.data.frame(cbind(temp=thist$mids, z= ZTp, Year=2024))
+  
+  #combine
+  ZT= rbind(ZT, ZTp)
+  
+  #----
+  TZdist.plot <- ggplot(Tplot, aes(x=Tmean, color=factor(Year))) +  geom_density(alpha=0.5)+
+    scale_fill_viridis_d() +scale_color_viridis_d()+
+    theme_classic(base_size = 18)+
+    labs(x = "T mean (°C)") +
+      #add growth rate distribution
+      geom_line(data=ZT, aes(x=temp, y=z), lty="dashed")
   
   
   #==================
