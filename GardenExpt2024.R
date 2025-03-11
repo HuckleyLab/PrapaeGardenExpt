@@ -432,14 +432,68 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #  The components of a selection gradient represent the direct strength of selection on each trait, adjusting for the phenotypic correlations among the traits; they can be readily estimated with partial regression analyses,
   
   #ESTIMATE SELECTION GRADIENT
-  #normalize response to +- 1SD
   
-  #tpc.gl
-  #tpc.gl.h
+  #combine wide data
+  inds<- match( c("FEMALE","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35" ), colnames(tpc))
+  colnames(tpc)[inds]<- c("Mom", "RGR23","RGR29","RGR11","RGR17","RGR35")
+  tpc$ID<- NA
+  tpc$period<- "recent"
   
+  tpc.h2$period<- "past"
+  
+  #combine time periods
+  tpc.sel<- rbind(tpc[,match(colnames(tpc.h2), colnames(tpc))] , tpc.h2)
+  
+  #normalize RGR response to +- 1SD
+  #normalize fitness metrics to mean of 1, normalize proportionally?
+  tpc.sel <- tpc.sel %>% 
+    group_by(period, expt) %>% 
+    dplyr::mutate(RGR11_scale = scale(RGR11),
+                     RGR17_scale = scale(RGR17),
+                     RGR23_scale = scale(RGR23),
+                     RGR29_scale = scale(RGR29),
+                     RGR35_scale = scale(RGR35), 
+                     surv_norm = surv / mean(surv, na.rm = TRUE),
+                     puptime_norm = puptime / mean(puptime, na.rm = TRUE),
+                     pupal_massmg_norm = pupal_massmg / mean(pupal_massmg, na.rm = TRUE),
+                     FecEggCount_norm = FecEggCount / mean(FecEggCount, na.rm = TRUE) ) %>%
+    ungroup()
+  
+  
+  #normalize RGR response to +- 1SD
+  tpc$rgr_23_scale <- scale(tpc$rgr_23)
+  tpc$rgr_29_scale <- scale(tpc$rgr_29)
+  tpc$rgr_11_scale <- scale(tpc$rgr_11)
+  tpc$rgr_17_scale <- scale(tpc$rgr_17)
+  tpc$rgr_35_scale <- scale(tpc$rgr_35)
+  
+  #historic
+  inds<- match( c("RGR23","RGR29","RGR11","RGR17","RGR35"), colnames(tpc.h))
+  colnames(tpc.h)[inds]<- c("rgr_23","rgr_29","rgr_11","rgr_17","rgr_35")
+  
+  tpc.h$rgr_23_scale <- scale(tpc.h$rgr_23)
+  tpc.h$rgr_29_scale <- scale(tpc.h$rgr_29)
+  tpc.h$rgr_11_scale <- scale(tpc.h$rgr_11)
+  tpc.h$rgr_17_scale <- scale(tpc.h$rgr_17)
+  tpc.h$rgr_35_scale <- scale(tpc.h$rgr_35)
+  
+  #normalize fitness metrics to mean of 1, normalize proportionally?
+  tpc$surv_norm <- tpc$surv / mean(tpc$surv, na.rm = TRUE)
+  tpc$puptime_norm <- tpc$puptime / mean(tpc$puptime, na.rm = TRUE)
+  tpc$pupal_massmg_norm <- tpc$pupal_massmg / mean(tpc$pupal_massmg, na.rm = TRUE)
+  tpc$FecEggCount_norm <- tpc$FecEggCount / mean(tpc$FecEggCount, na.rm = TRUE)
+  
+  #historic
+  inds<- match( c("Pupated","Time.to.Pupation","Pupa.wt","Fecundity"), colnames(tpc.h))
+  colnames(tpc.h)[inds]<- c("surv","puptime","pupal_massmg","FecEggCount")
+  
+  tpc.h$surv_norm <- tpc.h$surv / mean(tpc.h$surv, na.rm = TRUE)
+  tpc.h$puptime_norm <- tpc.h$puptime / mean(tpc.h$puptime, na.rm = TRUE)
+  tpc.h$pupal_massmg_norm <- tpc.h$pupal_massmg / mean(tpc.h$pupal_massmg, na.rm = TRUE)
+  tpc.h$FecEggCount_norm <- tpc.h$FecEggCount / mean(tpc.h$FecEggCount, na.rm = TRUE)
 
-  #tpc.gl.all
-  
+  df <- df %>%
+    mutate(normalized_column = column_name / mean(column_name))
   
   #-------
   # Plot trait changes
