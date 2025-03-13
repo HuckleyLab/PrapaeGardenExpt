@@ -8,7 +8,7 @@ library(nlme)
 library(lme4)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -446,7 +446,7 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   
   #normalize RGR response to +- 1SD
   #normalize fitness metrics to mean of 1, normalize proportionally?
-  tpc.sel <- tpc.sel %>% 
+  tpc.sel1 <- tpc.sel %>% 
     group_by(period, expt) %>% 
     dplyr::mutate(RGR11_scale = scale(RGR11),
                      RGR17_scale = scale(RGR17),
@@ -459,10 +459,56 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
                      FecEggCount_norm = FecEggCount / mean(FecEggCount, na.rm = TRUE) ) %>%
     ungroup()
   
-  #estimate selection
-  mod.surv <- lme(surv_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale +expt, random=~1|Mom, data = na.omit(tpc.sel))
+  tpc.sel1<- as.data.frame(tpc.sel1)
+  tpc.sel2 <- na.omit(tpc.sel1[,!(names(tpc.sel1) %in% c("ID","FecEggCount","FecEggCount_norm"))])
+  tpc.sel2f <- na.omit(tpc.sel1[,!(names(tpc.sel1) %in% c("ID"))])
   
-  #-------
+  #set up matrix for coefficients
+  expts<- c("june","july","aug")
+  periods<- c("recent","recent","past")
+  rgrs<- c("RGR11","RGR17","RGR23","RGR29","RGR35")
+  fitcomp<- c("mass","surv","puptime", "fec")
+  
+  sg= expand.grid(rgrs, expts, fitcomp)
+  sg= as.data.frame(cbind( sg,matrix(NA, nrow=nrow(sg), ncol=4)))
+  colnames(sg)= c("rgr","expt", "fitcomp", "value", "se", "t-value", "p-value")
+  sg$period <- periods[match(sg$expt, expts)]
+  
+  #estimate selection
+  for(k in 1:length(expts)){
+    #subset to experiment
+    tpc.sub<- tpc.sel2[which(tpc.sel2$expt==expts[k] & tpc.sel2$period==periods[k]),]
+    tpc.sub.f<- tpc.sel2f[which(tpc.sel2f$expt==expts[k] & tpc.sel2f$period==periods[k]),]
+    
+    mod.pmass <- lme(pupal_massmg_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
+    coef.pmass<- summary(mod.pmass)$tTable
+    
+    mod.surv <- lme(surv_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
+    coef.surv<- summary(mod.surv)$tTable
+    
+    mod.puptime <- lme(puptime_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
+    coef.puptime<- summary(mod.puptime)$tTable
+    
+    #fecundity
+    if(nrow(tpc.sub.f)>0){
+    mod.fec <- lme(FecEggCount_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub.f)
+    coef.fec<- summary(mod.fec)$tTable
+    }
+    
+    #save coefficients
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="mass"),c(4:7)]= coef.pmass[2:nrow(coef.pmass), c(1:2,4:5)]
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="surv"),c(4:7)]= coef.surv[2:nrow(coef.surv), c(1:2,4:5)]
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="puptime"),c(4:7)]= coef.pmass[2:nrow(coef.puptime), c(1:2,4:5)]
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="fec"),c(4:7)]= coef.pmass[2:nrow(coef.fec), c(1:2,4:5)]
+    
+  }
+  
+  #plot
+  
+
+
+
+#-------
   # Plot trait changes
   
   #combine wide format
