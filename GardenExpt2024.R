@@ -8,7 +8,7 @@ library(nlme)
 library(lme4)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -480,55 +480,78 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     tpc.sub<- tpc.sel2[which(tpc.sel2$expt==expts[k] & tpc.sel2$period==periods[k]),]
     tpc.sub.f<- tpc.sel2f[which(tpc.sel2f$expt==expts[k] & tpc.sel2f$period==periods[k]),]
     
-    mod.pmass <- lme(pupal_massmg_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
-    coef.pmass<- summary(mod.pmass)$tTable
+    #mod.pmass <- lme(pupal_massmg_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
+    #coef.pmass<- summary(mod.pmass)$tTable
+    mod.pmass <- lm(pupal_massmg_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub)
+    coef.pmass<- summary(mod.pmass)$coefficients
     
-    mod.surv <- lme(surv_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
-    coef.surv<- summary(mod.surv)$tTable
+    try({
+    #mod.surv <- lme(surv_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
+    #coef.surv<- summary(mod.surv)$tTable
+    mod.surv <- lm(surv_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub)
+    coef.surv<- summary(mod.surv)$coefficients
     
-    mod.puptime <- lme(puptime_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
-    coef.puptime<- summary(mod.puptime)$tTable
+    })
+    
+    #mod.puptime <- lme(puptime_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
+    #coef.puptime<- summary(mod.puptime)$tTable
+    mod.puptime <- lm(puptime_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub)
+    coef.puptime<- summary(mod.puptime)$coefficients
+    
+    #save coefficients
+    #for lme
+    #sg[which(sg$expt==expts[k] & sg$fitcomp=="mass"),c(4:7)]= coef.pmass[2:nrow(coef.pmass), c(1:2,4:5)]
+    #sg[which(sg$expt==expts[k] & sg$fitcomp=="surv"),c(4:7)]= coef.surv[2:nrow(coef.surv), c(1:2,4:5)]
+    #sg[which(sg$expt==expts[k] & sg$fitcomp=="puptime"),c(4:7)]= coef.puptime[2:nrow(coef.puptime), c(1:2,4:5)]
+    
+    #for lm
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="mass"),c(4:7)]= coef.pmass[2:nrow(coef.pmass),]
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="surv"),c(4:7)]= coef.surv[2:nrow(coef.surv), ]
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="puptime"),c(4:7)]= coef.puptime[2:nrow(coef.puptime), ]
     
     #fecundity
     if(nrow(tpc.sub.f)>0){
-    mod.fec <- lme(FecEggCount_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub.f)
-    coef.fec<- summary(mod.fec)$tTable
-    }
+    #mod.fec <- lme(FecEggCount_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub.f)
+    #coef.fec<- summary(mod.fec)$tTable
+    #sg[which(sg$expt==expts[k] & sg$fitcomp=="fec"),c(4:7)]= coef.fec[2:nrow(coef.fec), c(1:2,4:5)]
     
-    #save coefficients
-    sg[which(sg$expt==expts[k] & sg$fitcomp=="mass"),c(4:7)]= coef.pmass[2:nrow(coef.pmass), c(1:2,4:5)]
-    sg[which(sg$expt==expts[k] & sg$fitcomp=="surv"),c(4:7)]= coef.surv[2:nrow(coef.surv), c(1:2,4:5)]
-    sg[which(sg$expt==expts[k] & sg$fitcomp=="puptime"),c(4:7)]= coef.pmass[2:nrow(coef.puptime), c(1:2,4:5)]
-    sg[which(sg$expt==expts[k] & sg$fitcomp=="fec"),c(4:7)]= coef.pmass[2:nrow(coef.fec), c(1:2,4:5)]
+    mod.fec <- lm(FecEggCount_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub.f)
+    coef.fec<- summary(mod.fec)$coefficients
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="fec"),c(4:7)]= coef.fec[2:nrow(coef.fec), ]
+    }
     
   }
   
-  #plot
+  #plot coefficients
+  sg$temp<- gsub("RGR","",sg$rgr)
+
+  #code significance
+  colnames(sg)[6:7]<- c("tvalue","pvalue")
+  sg$sig<- ifelse(sg$pvalue<=0.05, "sig", "ns")
   
+  plot.sg<- ggplot(sg, aes(x=temp, y=value, color=fitcomp, fill=sig, group=fitcomp)) + 
+    geom_point(size=4, pch=21)+ geom_smooth()+
+    facet_wrap(.~expt)+
+    ylab("Selection gradient") +xlab("Temperature (C)")+
+    scale_color_viridis_d()+
+    ylim(-0.15, 0.15)+
+    theme_classic()+
+    scale_fill_manual(values = c("sig" = "gray", "ns" = "white"))
 
-
-
+  #or gsg package
+  #https://cran.r-project.org/src/contrib/Archive/gsg/
+  
 #-------
   # Plot trait changes
   
-  #combine wide format
-  tpc.wc<- tpc[,c("rgr_11", "rgr_17", "rgr_23", "rgr_29", "rgr_35", "surv", "puptime", "pupal_massmg", "FecEggCount","expt")]
-  names(tpc.wc)<- c("RGR11", "RGR17", "RGR23", "RGR29", "RGR35", "Pupated", "Time.to.Pupation", "Pupa.wt", "Fecundity","expt")
-  tpc.wc$tim_per<- "initial"
-  
-  tpc.wp<- tpc.h[,c("RGR11", "RGR17", "RGR23", "RGR29", "RGR35", "Pupated", "Time.to.Pupation", "Pupa.wt", "Fecundity","expt")]
-  tpc.wp$tim_per<- "recent"
-  
-  tpc.w<- rbind(tpc.wc, tpc.wp)
-  
   #mass
-  plot.mass<- ggplot(tpc.w, aes(x=Pupa.wt,color=expt, group=expt)) + 
+  plot.mass<- ggplot(tpc.sel, aes(x=pupal_massmg,color=expt, group=expt)) + 
     geom_density(aes(fill=expt), alpha=0.5)+
     ylab("Density") +xlab("pupal mass (mg)")+
     scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)
   
   #pupal time
-  plot.pt<- ggplot(tpc.w, aes(x=Time.to.Pupation,color=expt, group=expt)) + 
+  plot.pt<- ggplot(tpc.sel, aes(x=puptime,color=expt, group=expt)) + 
     geom_density(aes(fill=expt), alpha=0.5)+
     ylab("Density") +xlab("pupal mass (mg)")+
     scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)
@@ -545,73 +568,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   pdf("Prapae_correlations.pdf",height = 6, width = 10)
   plot.cor1 +plot.cor2
   dev.off()
-  
-  #-------
-  ## Analyze
-  # Pupal mass: significant difference at 11, 23, 35C
-  # Fecundity egg count: NS
-  # Survival: significant difference at 17, 23C
-  # Pupal time: NS
-  
-  #pick response variable: 
-  #tpc$rvar<- tpc$pupal_massmg
-  #tpcm<- tpc[,-"FecEggCount"]
-  
-  #tpc$rvar<- tpc$FecEggCount
-  #tpcm<- tpc
-  # 
-  # tpc$rvar<- tpc$surv
-  # tpcm<- tpc[,-c("FecEggCount","puptime")]
-  # 
-  tpc$rvar<- tpc$puptime
-  tpcm<- tpc[,-which(colnames(tpc)=="FecEggCount")]
-  
-  #experiment currently fixed effect, make randow or otherwise change
-  mod= lm(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35 +expt, data= tpcm) 
-  #divide experiments
-  #mod= lm(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, data= tpcm[tpcm$expt=="june",])
-  #mod= lm(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, data= tpcm[tpcm$expt=="july",])
-  anova(mod)
-  
-  mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35 +expt, random=~1|FEMALE, data = na.omit(tpcm))
-  #divide experiments
-  #mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, random=~1|FEMALE, data = na.omit(tpcm[tpcm$expt=="june",]))
-  #mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35, random=~1|FEMALE, data = na.omit(tpcm[tpcm$expt=="july",]))
-  anova(mod.lmer)
-  
-  #----
-  #Combine across time and analyze 
-  
-  #code time
-  tpc$time<- "recent"
-  tpc.h2$time<- "past"
-  
-  #rename
-  tpc.h2$FEMALE <- tpc.h2$Mom
-  tpc.h2$rgr_11 <- tpc.h2$RGR11
-  tpc.h2$rgr_17 <- tpc.h2$RGR17
-  tpc.h2$rgr_23 <- tpc.h2$RGR23
-  tpc.h2$rgr_29 <- tpc.h2$RGR29
-  tpc.h2$rgr_35 <- tpc.h2$RGR35
-  
-  tpc<- tpc[,c("FEMALE","f.ind","expt","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35","pupal_massmg","FecEggCount","surv","puptime","time")]
-  tpc.h2<- tpc.h2[,c("FEMALE","f.ind","expt","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35","pupal_massmg","FecEggCount","surv","puptime","time")]
-  
-  tpc.all<- rbind(tpc, tpc.h2)
-  
-  #pick response variable
-  tpc.all$rvar<- tpc.all$pupal_massmg
-  tpc.all$rvar<- tpc.all$FecEggCount
-  tpc.all$rvar<- tpc.all$surv
-  tpc.all$rvar<- tpc.all$puptime
-  
-  tpcm<- tpc.all[,-which(colnames(tpc.all)=="FecEggCount")]
-  
-  mod= lm(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35 +time+ rgr_11*time +rgr_17*time +rgr_23*time +rgr_29*time +rgr_35*time, data= tpcm) 
-  anova(mod)
-  
-  mod.lmer <- lme(rvar ~ rgr_11 +rgr_17 +rgr_23 +rgr_29 +rgr_35 +time+ rgr_11*time +rgr_17*time +rgr_23*time +rgr_29*time +rgr_35*time, random=~1|FEMALE, data = na.omit(tpcm))
-  anova(mod.lmer)
   
   #--------------------
   ## Variance covariance analysis
@@ -658,19 +614,19 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #CURRENT
   #family means
   tpc.f <- tpc %>% 
-    group_by(FEMALE) %>% 
-    dplyr::summarise(rgr_11 = mean(rgr_11, na.rm=T),
-                     rgr_17 = mean(rgr_17, na.rm=T),
-                     rgr_23 = mean(rgr_23, na.rm=T),
-                     rgr_29 = mean(rgr_29, na.rm=T),
-                     rgr_35 = mean(rgr_35, na.rm=T) )
+    group_by(Mom) %>% 
+    dplyr::summarise(RGR11 = mean(RGR11, na.rm=T),
+                     RGR17 = mean(RGR17, na.rm=T),
+                     RGR23 = mean(RGR23, na.rm=T),
+                     RGR29 = mean(RGR29, na.rm=T),
+                     RGR35 = mean(RGR35, na.rm=T) )
   
   #G matrix
   g.mat<- var(tpc.f[,-1], na.rm=TRUE)*10^6
   g.mat.m <- melt(g.mat)
   
   #P matrix
-  p.mat<- var(tpc[,c("rgr_11","rgr_17","rgr_23","rgr_29","rgr_35")], na.rm=TRUE)*10^6
+  p.mat<- var(tpc[,c("RGR11","RGR17","RGR23","RGR29","RGR35")], na.rm=TRUE)*10^6
   p.mat.m <- melt(p.mat)
   
   g.mat.c<-g.mat
@@ -731,6 +687,19 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   pdf("PrapaeTPC_cov.pdf",height = 10, width = 10)
   plot.var
   dev.off()
+  
+  #-----------------
+  #Estimate eigenfunctions
+  
+  # Eigen decomposition
+  eigen_decomp <- eigen(g.mat)
+  
+  # Extract first two eigenvectors (principal components)
+  leading_eigenvector <- eigen_decomp$vectors[, 1]
+  second_eigenvector <- eigen_decomp$vectors[, 2]
+  
+  # Corresponding eigenvalues
+  eigenvalues <- eigen_decomp$values
   
   #-------------------- 
   ## Old correlations
