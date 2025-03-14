@@ -8,7 +8,7 @@ library(nlme)
 library(lme4)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -534,10 +534,14 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     facet_wrap(.~expt)+
     ylab("Selection gradient") +xlab("Temperature (C)")+
     scale_color_viridis_d()+
-    ylim(-0.15, 0.15)+
+    ylim(-0.12, 0.12)+
     theme_classic()+
     scale_fill_manual(values = c("sig" = "gray", "ns" = "white"))
 
+  pdf("Prapae_selectiongradients.pdf",height = 6, width = 10)
+  plot.sg
+  dev.off()
+  
   #or gsg package
   #https://cran.r-project.org/src/contrib/Archive/gsg/
   
@@ -571,44 +575,100 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   
   #--------------------
   ## Variance covariance analysis
-# Estimate G matrix
+  library(sommer)
   
-  tpc.l2= na.omit(tpc.l)
-  tpc.l2$temp= factor(tpc.l2$temp, levels=c(11,17,23,29,35))
+  #Past
+  # Estimate G matrix
+  df<- tpc.sel[which(tpc.sel$period=="past"),-which(colnames(tpc.sel)%in% c("FecEggCount"))]
+  df<- na.omit(df)
+  # Model specification
+  model <- mmer(
+     cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~pupal_massmg,
+    random = ~ vsr(isc(f.ind), Gtc = unsm(5)) +   # Genetic effects
+      vsr(isc(Mom), Gtc = diag(5)),
+    data = df
+  )
   
-  fm1= lmer(value~temp+(temp|FEMALE), 
-            REML = TRUE, na.action = 'na.fail', 
-            data= tpc.l2)
+  # Genetic variance-covariance matrix (G)
+  G.h <- model$sigma$`u:f.ind`
+ 
+  #---
+  #Estimate P matrix by not accounting for family
+  # Model specification
+  model <- mmer(
+    cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~pupal_massmg,
+    random = ~ vsr(isc(f.ind), Gtc = unsm(5)),
+    data = df
+  )
   
-  vcov.m=as.matrix(vcov(fm1)*10^6)
+  # Genetic variance-covariance matrix (G)
+  P.h <- model$sigma$`u:f.ind`
   
-  #plot
-  #plot.cov= heatmap(vcov.m, Rowv=NA, Colv=NA)
-  vcov.m <- melt(vcov.m)
-  plot.cov= ggplot(data = vcov.m, aes(x=Var1, y=Var2, fill=value)) + 
-    geom_tile()+scale_fill_viridis()
+  #------------
+  #recent
+  # Estimate G matrix
+  df<- tpc.sel[which(tpc.sel$period=="recent"),-which(colnames(tpc.sel)%in% c("ID","FecEggCount"))]
+  df<- na.omit(df)
+  # Model specification
+  model <- mmer(
+    cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~pupal_massmg,
+    random = ~ vsr(isc(f.ind), Gtc = unsm(5)) +   # Genetic effects
+      vsr(isc(Mom), Gtc = diag(5)),
+    data = df
+  )
+  
+  # Genetic variance-covariance matrix (G)
+  G <- model$sigma$`u:f.ind`
+  
+  #---
+  #Estimate P matrix by not accounting for family
+  # Model specification
+  model <- mmer(
+    cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~pupal_massmg,
+    random = ~ vsr(isc(f.ind), Gtc = unsm(5)),
+    data = df
+  )
+  
+  # Genetic variance-covariance matrix (G)
+  P <- model$sigma$`u:f.ind`
+  
+  #---
+  #melt matrices
+  gm.h <- melt(G.h*10^6)
+  pm.h <- melt(P.h*10^6)
+  gm <- melt(G*10^6)
+  pm <- melt(P*10^6)
+  
+  #Combine matrices
+  gm.h$type<- "G"; gm.h$time<- "past"
+  pm.h$type<- "P"; pm.h$time<- "past"
+  gm$type<- "G"; gm$time<- "recent"
+  pm$type<- "P"; pm$time<- "recent"
+  
+  var.all<- rbind(gm.h, pm.h, gm, pm)
+ 
+  #----
+ # Variance Covariance plot
+  
+  plot.var= ggplot(data = var.all, aes(x=Var1, y=Var2, fill=value)) + 
+    geom_tile()+
+    facet_grid(type~time)+
+    scale_fill_viridis()
+  #scale_fill_gradient2(low ="orange", high = "blue", space = "Lab")
+  
+  #save figure 
+  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
+  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
+  
+  pdf("PrapaeTPC_cov_REML.pdf",height = 10, width = 10)
+  plot.var
+  dev.off()
   
   #library(evolqg)
-  
-  old <- options(contrasts=c("contr.sum","contr.poly"))
-  
-  #tpc.lm = lm(as.matrix(tpc[,c(5,6,3,4,7)])~as.factor(tpc[,"FEMALE"]))
-  
-  # cov.matrix <- CalculateMatrix(tpc.lm)
-  # 
-  # options(old)
-  # #To obtain a correlation matrix, use:
-  # cor.matrix <- cov2cor(cov.matrix)
-  # 
-  # cor.matrix <- cov2cor(cov.matrix)
-  # 
-  # cor.matrix.m <- melt(cor.matrix)
-  # plot.cov2= ggplot(data = cor.matrix.m, aes(x=Var1, y=Var2, fill=value)) + 
-  #   geom_tile()+scale_fill_viridis()
-  # 
   # #tutorial
   # #  https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/j.1365-2656.2009.01639.x
   
+  #-----------------------------
   #But: a quick and dirty method is probably sufficient for now:  compute mean values for each family at each temperature, and then use the var function is compute the var-covariance matrix on the family means.  This is the least-squares estimate of the broad sense G matrix.  Using var on the individual values gives the comparable estimate of the P (phenotypic) matrix.  These should give a good approximation to the REML estimates (which are constrained so that you don’t get variances< 0 ).
   
   #CURRENT
@@ -629,9 +689,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   p.mat<- var(tpc[,c("RGR11","RGR17","RGR23","RGR29","RGR35")], na.rm=TRUE)*10^6
   p.mat.m <- melt(p.mat)
   
-  g.mat.c<-g.mat
-  p.mat.c<-p.mat
-  
   #HISTORIC
   #family means
   tpc.fh <- tpc.h %>% 
@@ -643,32 +700,32 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
                      RGR35 = mean(RGR35, na.rm=T) )
   
   #G matrix
-  g.mat<- var(tpc.fh[,-1], na.rm=TRUE)*10^6
-  g.mat.m.h <- melt(g.mat)
+  g.mat.h<- var(tpc.fh[,-1], na.rm=TRUE)*10^6
+  g.mat.m.h <- melt(g.mat.h)
   
   #P matrix
-  p.mat<- var(tpc.h[,c("RGR11","RGR17","RGR23","RGR29","RGR35")], na.rm=TRUE)*10^6
-  p.mat.m.h <- melt(p.mat)
+  p.mat.h<- var(tpc.h[,c("RGR11","RGR17","RGR23","RGR29","RGR35")], na.rm=TRUE)*10^6
+  p.mat.m.h <- melt(p.mat.h)
   
   #-------------------
   #Combine Var matrices
-  g.mat.m$type<- "G"; g.mat.m$time<- "current"
-  p.mat.m$type<- "P"; p.mat.m$time<- "current"
-  g.mat.m.h$type<- "G"; g.mat.m.h$time<- "historic"
-  p.mat.m.h$type<- "P"; p.mat.m.h$time<- "historic"
+  g.mat.m$type<- "G"; g.mat.m$time<- "recent"
+  p.mat.m$type<- "P"; p.mat.m$time<- "recent"
+  g.mat.m.h$type<- "G"; g.mat.m.h$time<- "past"
+  p.mat.m.h$type<- "P"; p.mat.m.h$time<- "past"
   var.all<- rbind(g.mat.m, p.mat.m, g.mat.m.h, p.mat.m.h)
   var.all$Var1 <- sub("rgr_", "RGR", var.all$Var1)
   var.all$Var2 <- sub("rgr_", "RGR", var.all$Var2)
 
   #write out matrices
-  write.csv(rbind(g.mat.c,p.mat.c,g.mat,p.mat), "matrices.csv" )
+  write.csv(rbind(g.mat,p.mat,g.mat.h,p.mat.h), "matrices.csv" )
   write.csv(var.all, "matriceslong.csv" )
   
   #write out data 
   if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/out/")
   if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/out/")
   
-  write.csv(tpc.all, "garden_tpcs.csv")
+  write.csv(tpc.sel, "garden_tpcs.csv")
   
     #----------------
   ### Variance Covariance plot
@@ -693,13 +750,36 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   
   # Eigen decomposition
   eigen_decomp <- eigen(g.mat)
-  
-  # Extract first two eigenvectors (principal components)
-  leading_eigenvector <- eigen_decomp$vectors[, 1]
-  second_eigenvector <- eigen_decomp$vectors[, 2]
-  
+  eigen_decomp.h <- eigen(g.mat.h)
   # Corresponding eigenvalues
   eigenvalues <- eigen_decomp$values
+  
+  # Extract eigenvectors (principal components)
+  evs <- as.data.frame(eigen_decomp$vectors)
+  evs.h <- as.data.frame(eigen_decomp.h$vectors)
+  
+  evs$period<- "current"
+  evs.h$period<- "past"
+  
+  evs$ev<- c(1:5)
+  evs.h$ev<- c(1:5)
+  
+  #plot eigen vectors
+  evp<- rbind(evs[1:2,], evs.h[1:2,])
+  colnames(evp)[1:5]<- c(11, 17, 23, 29, 35)
+ 
+  #to long format
+  evp.l <- melt(evp, 
+                id.vars= c("period","ev"),
+                 variable.name = "temp")
+  evp.l$per.ev<- paste(evp.l$period, evp.l$ev, sep="_")
+  
+  plot.ev= ggplot(data = evp.l, aes(x=temp, y=value, color=factor(ev), lty=period, group=per.ev)) + 
+    geom_point()+geom_smooth()+ylab("eigenvector")
+
+  pdf("Fig_eigenvector.pdf",height = 10, width = 10)
+  plot.ev
+  dev.off()
   
   #-------------------- 
   ## Old correlations

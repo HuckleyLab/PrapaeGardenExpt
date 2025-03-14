@@ -17,7 +17,7 @@ library(readxl)
 #Taylor version: https://github.com/taylorhatcher/WARP2024/tree/main
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
@@ -128,6 +128,8 @@ Tdist.hr.plot <- ggplot(tdat.mean.hr, aes(x=Tmax, color=factor(Year), fill=facto
 #-------------------------
 #temperatures during experiments
 # OPUS 1999: 15-25 Aug 1999; doy 227-237, 
+#From Joel March 24: The selection experiment in 1999 ran from Aug 11-25, with most individuals first placed in the garden on aug 12-13. We reset and monitored the field temperature measurements on Aug 11, but there a logging issue so that the data are only reliable starting Aug 15
+
 # KingsolverGenetica2001 says July 28-Aug 5; doy 209-217 (Fig 8)
 # KingsolverGomulkiewicz2003 uses 195 to 217; check Fig 3 distribution
 
@@ -264,7 +266,7 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
     labs(x = "T mean (°C)") +
       #add growth rate distribution
       geom_line(data=ZT, aes(x=temp, y=z), lty="dashed")
-  
+  #solid is f(T); dashed is Z(T)
   
   #==================
   #Temp distributions over time  
@@ -356,11 +358,10 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
   
   design <- "AB
-              AB
-              CC"
+              CD"
   
-  pdf("Fig_Tdist.pdf",height = 8, width = 10)
-  plot.sel + Tdist.exp.plot + month.plot +plot_layout(design=design) 
+  pdf("Fig_Tdist.pdf",height = 8, width = 12)
+  plot.sel + TZdist.plot + Tdist.exp.plot + month.plot +plot_layout(design=design) 
   dev.off()
  
   #=============================
