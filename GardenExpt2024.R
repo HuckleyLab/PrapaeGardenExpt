@@ -8,7 +8,7 @@ library(nlme)
 library(lme4)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -448,11 +448,11 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #normalize fitness metrics to mean of 1, normalize proportionally?
   tpc.sel1 <- tpc.sel %>% 
     group_by(period, expt) %>% 
-    dplyr::mutate(RGR11_scale = scale(RGR11),
-                     RGR17_scale = scale(RGR17),
-                     RGR23_scale = scale(RGR23),
-                     RGR29_scale = scale(RGR29),
-                     RGR35_scale = scale(RGR35), 
+    dplyr::mutate(RGR11_scale = scale(RGR11, center=TRUE, scale=FALSE),
+                     RGR17_scale = scale(RGR17, center=TRUE, scale=FALSE),
+                     RGR23_scale = scale(RGR23, center=TRUE, scale=FALSE),
+                     RGR29_scale = scale(RGR29, center=TRUE, scale=FALSE),
+                     RGR35_scale = scale(RGR35, center=TRUE, scale=FALSE), 
                      surv_norm = surv / mean(surv, na.rm = TRUE),
                      puptime_norm = puptime / mean(puptime, na.rm = TRUE),
                      pupal_massmg_norm = pupal_massmg / mean(pupal_massmg, na.rm = TRUE),
@@ -534,7 +534,7 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     facet_wrap(.~expt)+
     ylab("Selection gradient") +xlab("Temperature (C)")+
     scale_color_viridis_d()+
-    ylim(-0.12, 0.12)+
+    #ylim(-0.12, 0.12)+
     theme_classic()+
     scale_fill_manual(values = c("sig" = "gray", "ns" = "white"))
 
@@ -664,6 +664,21 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   plot.var
   dev.off()
   
+  #----
+  #compare through time
+  tpc.sel$mom_per <- paste(tpc.sel$Mom, tpc.sel$period, sep="_")
+                            
+  df<- tpc.sel[,-which(colnames(tpc.sel)%in% c("ID","FecEggCount"))]
+  df<- na.omit(df)
+  # Model specification
+  model <- mmer(
+    cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~pupal_massmg,
+    random = ~ vsr(isc(f.ind), Gtc = unsm(5)) +   # Genetic effects
+      vsr(isc(mom_per), Gtc = diag(5))+
+      vsr(isc(period), Gtc = diag(5)),
+    data = df
+  )
+  
   #library(evolqg)
   # #tutorial
   # #  https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/j.1365-2656.2009.01639.x
@@ -689,6 +704,10 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   p.mat<- var(tpc[,c("RGR11","RGR17","RGR23","RGR29","RGR35")], na.rm=TRUE)*10^6
   p.mat.m <- melt(p.mat)
   
+  #correlation matrix
+  c.mat<-  cor(na.omit(tpc[,c("RGR11","RGR17","RGR23","RGR29","RGR35")]))
+  c.mat.m <- melt(c.mat)
+  
   #HISTORIC
   #family means
   tpc.fh <- tpc.h %>% 
@@ -706,6 +725,10 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #P matrix
   p.mat.h<- var(tpc.h[,c("RGR11","RGR17","RGR23","RGR29","RGR35")], na.rm=TRUE)*10^6
   p.mat.m.h <- melt(p.mat.h)
+  
+  #correlation matrix
+  c.mat.h<-  cor(na.omit(tpc.h[,c("RGR11","RGR17","RGR23","RGR29","RGR35")]))
+  c.mat.m.h <- melt(c.mat.h)
   
   #-------------------
   #Combine Var matrices
@@ -745,12 +768,26 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   plot.var
   dev.off()
   
+  #----------
+  #Correlation plot
+  
+  c.mat.m$type<- "cor"; c.mat.m$time<- "recent"
+  c.mat.m.h$type<- "cor"; c.mat.m.h$time<- "past"
+  cor.all<- rbind(c.mat.m, c.mat.m.h)
+  cor.all$Var1 <- sub("rgr_", "RGR", cor.all$Var1)
+  cor.all$Var2 <- sub("rgr_", "RGR", cor.all$Var2)
+  
+  cor.var= ggplot(data = cor.all, aes(x=Var1, y=Var2, fill=value)) + 
+    geom_tile()+
+    facet_grid(type~time)+
+    scale_fill_gradient2(low ="orange", high = "blue", space = "Lab")
+  
   #-----------------
   #Estimate eigenfunctions
   
   # Eigen decomposition
-  eigen_decomp <- eigen(g.mat)
-  eigen_decomp.h <- eigen(g.mat.h)
+  eigen_decomp <- eigen(p.mat)
+  eigen_decomp.h <- eigen(p.mat.h)
   # Corresponding eigenvalues
   eigenvalues <- eigen_decomp$values
   
@@ -780,6 +817,38 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   pdf("Fig_eigenvector.pdf",height = 10, width = 10)
   plot.ev
   dev.off()
+  
+  #------
+  #eigen plot for correlation matrix
+  
+  # Eigen decomposition
+  eigen_decomp <- eigen(c.mat)
+  eigen_decomp.h <- eigen(c.mat.h)
+  # Corresponding eigenvalues
+  eigenvalues <- eigen_decomp$values
+  
+  # Extract eigenvectors (principal components)
+  evs <- as.data.frame(eigen_decomp$vectors)
+  evs.h <- as.data.frame(eigen_decomp.h$vectors)
+  
+  evs$period<- "current"
+  evs.h$period<- "past"
+  
+  evs$ev<- c(1:5)
+  evs.h$ev<- c(1:5)
+  
+  #plot eigen vectors
+  evp<- rbind(evs[1:2,], evs.h[1:2,])
+  colnames(evp)[1:5]<- c(11, 17, 23, 29, 35)
+  
+  #to long format
+  evp.l <- melt(evp, 
+                id.vars= c("period","ev"),
+                variable.name = "temp")
+  evp.l$per.ev<- paste(evp.l$period, evp.l$ev, sep="_")
+  
+  plot.corev= ggplot(data = evp.l, aes(x=temp, y=value, color=factor(ev), lty=period, group=per.ev)) + 
+    geom_point()+geom_smooth()+ylab("eigenvector")
   
   #-------------------- 
   ## Old correlations
