@@ -3,7 +3,7 @@
 #https://wildanimalmodels.org/
 #example: https://www.journals.uchicago.edu/doi/full/10.1086/730261
 
-
+#-----------------------
 
 df<- tpc.sel[which(tpc.sel$period=="past"),-which(colnames(tpc.sel)%in% c("FecEggCount"))]
 df<- na.omit(df)
@@ -67,20 +67,57 @@ old <- options(contrasts=c("contr.sum","contr.poly"))
 # #tutorial
 # #  https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/j.1365-2656.2009.01639.x
 
+#--------------
 library(MCMCglmm)
+#install.packages("pedigree")
+library(pedigree)
 
-model <- MCMCglmm(
-  cbind(trait1, trait2, trait3, trait4, trait5, fitness) ~ 
-    trait - 1 + sex + age,  # Fixed effects
-  random = ~ us(trait):individual,  # Genetic effects
-  rcov = ~ us(trait):units,        # Residual effects
-  family = rep("gaussian", 6),     # Use "poisson" for count-based fitness
-  pedigree = pedigree,
-  data = your_data,
-  nitt = 150000, burnin = 50000, thin = 100,
-  prior = prior
+df<- tpc.sel[which(tpc.sel$period=="past"),-which(colnames(tpc.sel)%in% c("FecEggCount"))]
+df<- na.omit(df)
+names(df)[c(1)]<- c("mother")
+#make new id
+df$id<- 1: nrow(df)
+
+#make pedigree matrix
+pedigree<- df[,c("id", "mother")]
+pedigree$father<- "NA"
+ped_matrix <- orderPed(pedigree)
+
+#inverse_A <- inverseA(pedigree = ped_matrix)$Ainv
+
+# Set up the prior
+trait_prior <- list(
+  R = list(V = diag(5), nu = 0.002, fix = 5),  # Fix residual variance for fitness
+  G = list(
+    G1 = list(V = diag(5)*0.02, nu = 5,    # Individual genetic effects
+              alpha.mu = rep(0,5), alpha.V = diag(25^2,5,5)),
+    G2 = list(V = diag(5)*0.02, nu = 5,    # Maternal effects
+              alpha.mu = rep(0,5), alpha.V = diag(25^2,5,5))
+  )
 )
 
+# Model for traits
+trait_model <- MCMCglmm(
+  cbind(RGR11, RGR17, RGR23, RGR29, RGR35) ~ trait - 1 + 
+    at.level(trait, 1:5):mean,
+  random = ~ us(trait):id + us(trait):mother,
+  rcov = ~ us(trait):units,
+  family = rep("gaussian", 5),
+  prior = trait_prior,
+  pedigree = pedigree,
+  data = df,
+  nitt = 130000,
+  burnin = 30000,
+  thin = 100
+)
+
+# Extract G matrix (additive genetic variance-covariance matrix)
+G_matrix <- matrix(colMeans(model$VCV[,grep("animal", colnames(model$VCV))]), 6, 6)
+
+# Extract P matrix (phenotypic variance-covariance matrix)
+P_matrix <- matrix(colMeans(model$VCV), 6, 6)
+
+#or this?
 # Genetic (G) matrix (6x6)
 G_matrix <- apply(model$VCV[, grep("individual", colnames(model$VCV))], 
                   2, posterior.mode)
@@ -120,7 +157,7 @@ df<- tpc.sel[which(tpc.sel$period=="past"),-which(colnames(tpc.sel)%in% c("FecEg
 df<- na.omit(df)
 # Model specification
 model <- mmer(
-  cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~pupal_massmg,
+  cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~1,
   random = ~ vsr(isc(f.ind), Gtc = unsm(5)) +   # Genetic effects
     vsr(isc(Mom), Gtc = diag(5)),
   data = df
@@ -133,7 +170,7 @@ G.h <- model$sigma$`u:f.ind`
 #Estimate P matrix by not accounting for family
 # Model specification
 model <- mmer(
-  cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~pupal_massmg,
+  cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~1,
   random = ~ vsr(isc(f.ind), Gtc = unsm(5)),
   data = df
 )
@@ -148,7 +185,7 @@ df<- tpc.sel[which(tpc.sel$period=="recent"),-which(colnames(tpc.sel)%in% c("ID"
 df<- na.omit(df)
 # Model specification
 model <- mmer(
-  cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~pupal_massmg,
+  cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~1,
   random = ~ vsr(isc(f.ind), Gtc = unsm(5)) +   # Genetic effects
     vsr(isc(Mom), Gtc = diag(5)),
   data = df
@@ -161,7 +198,7 @@ G <- model$sigma$`u:f.ind`
 #Estimate P matrix by not accounting for family
 # Model specification
 model <- mmer(
-  cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~pupal_massmg,
+  cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~1,
   random = ~ vsr(isc(f.ind), Gtc = unsm(5)),
   data = df
 )
@@ -209,7 +246,7 @@ df<- tpc.sel[,-which(colnames(tpc.sel)%in% c("ID","FecEggCount"))]
 df<- na.omit(df)
 # Model specification
 model <- mmer(
-  cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~pupal_massmg,
+  cbind(RGR11,RGR17,RGR23,RGR29,RGR35)~1,
   random = ~ vsr(isc(f.ind), Gtc = unsm(5)) +   # Genetic effects
     vsr(isc(mom_per), Gtc = diag(5))+
     vsr(isc(period), Gtc = diag(5)),

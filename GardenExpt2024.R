@@ -8,7 +8,7 @@ library(nlme)
 library(lme4)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -691,10 +691,24 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   evs$ev<- c(1:5)
   evs.h$ev<- c(1:5)
   
+  #eigenvectors from paper
+ ev.old= as.data.frame(matrix(c(-0.029, 0.084, -0.179,
+                  -0.001, 0.175, 0.614,
+                  0.039, -0.276, -0.705,
+                  0.166, -0.926, 0.305,
+                  0.985, 0.170, -0.029),
+                  nrow=5, ncol=3, byrow=T ))
+  colnames(ev.old)<- c("PC1", "PC2", "PC3")
+  ev.old$temp<- c(11,17,23,29,35)
+  #reformat
+  ev.old= as.data.frame(rbind(c(ev.old[,1]), c(ev.old[,2])))
+  ev.old$period<- c("2001 paper", "2001 paper")
+  ev.old$ev<- c(1,2)
+  
   #plot eigen vectors
-  evp<- rbind(evs[1:2,], evs.h[1:2,])
+  evp<- as.data.frame(rbind(evs[1:2,], evs.h[1:2,], ev.old))
   colnames(evp)[1:5]<- c(11, 17, 23, 29, 35)
- 
+  
   #to long format
   evp.l <- melt(evp, 
                 id.vars= c("period","ev"),
