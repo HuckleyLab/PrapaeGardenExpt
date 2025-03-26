@@ -4,6 +4,85 @@
 #example: https://www.journals.uchicago.edu/doi/full/10.1086/730261
 
 #-----------------------
+#install.packages("pedigree")
+library(MCMCglmm)
+
+#library(pedigree)
+#library(devtools)
+#install_github("cran/MasterBayes")
+#library(MasterBayes)
+
+df<- tpc.sel[which(tpc.sel$period=="past"),-which(colnames(tpc.sel)%in% c("FecEggCount"))]
+df<- na.omit(df)
+names(df)[c(1)]<- c("mother")
+#make new id
+df$id<- 1: nrow(df)
+
+#pedigree not working
+#make pedigree matrix
+pedigree<- df[,c("id", "mother")]
+pedigree$father<- "NA"
+
+# Manual pedigree completion
+all_parents <- unique(c(pedigree$mother, pedigree$father))
+missing_ids <- setdiff(all_parents, pedigree$id)
+pedigree <- rbind(pedigree, 
+                       data.frame(id=missing_ids, mother=NA, father=NA))
+
+#------
+# Define priors for multivariate model (5 traits)
+ntrait <- 5
+prior_multivar <- list(
+  R = list(V = diag(ntrait), nu = 0.002),
+  G = list(G1 = list(V = diag(ntrait)*0.02, nu = ntrait),  # Animal effect
+           G2 = list(V = diag(ntrait)*0.02, nu = ntrait))  # Maternal effect
+)
+
+# Fit multivariate animal model
+model <- MCMCglmm(
+  fixed = cbind(RGR11, RGR17, RGR23, RGR29, RGR35) ~ 1,
+  random = ~ us(trait):id + us(trait):mother,
+  rcov = ~ us(trait):units,
+  family = rep("gaussian", 5),
+  #pedigree = pedigree,
+  data = df,
+  prior = prior_multivar,
+  nitt = 60000,
+  burnin = 10000,
+  thin = 25,
+  verbose = FALSE
+)
+
+# Extract posterior means for G and P matrices
+G_matrix <- apply(model$VCV[, grep("id", colnames(model$VCV))], 2, mean)
+dim(G_matrix) <- c(ntrait, ntrait)
+
+P_matrix <- apply(model$VCV[, grep("units", colnames(model$VCV))], 2, mean) + 
+  apply(model$VCV[, grep("mother", colnames(model$VCV))], 2, mean) + 
+  G_matrix
+dim(P_matrix) <- c(ntrait, ntrait)
+
+#----
+#https://rdrr.io/cran/evolqg/man/RandomSkewers.html
+# Compare G and P matrices using Random Skewers
+matrix_similarity <- RandomSkewers(G_matrix, P_matrix)
+# Decompose G-matrix to identify major axes of variation
+srd_results <- SRD(G_matrix, P_matrix)
+
+#Mantel Test: Tests matrix element correlations while accounting for trait dependencies:
+mantel_results <- MantelCor(G_matrix, P_matrix)
+
+#Krzanowski's Comparison: Compares subspaces spanned by matrices' eigenvectors:
+krz_results <- KrzCor(G_matrix, P_matrix)
+
+#PCA Similarity: Quantifies overlap in major axes of variation:
+pca_sim <- PCASimilarity(G_matrix, P_matrix)
+
+#Bayesian Framework: Compare posterior distributions of matrices:
+bayes_compare <- BayesianMatrixCompare(G_samples, P_samples)
+
+#=============================
+#Other approaches
 
 df<- tpc.sel[which(tpc.sel$period=="past"),-which(colnames(tpc.sel)%in% c("FecEggCount"))]
 df<- na.omit(df)
@@ -22,11 +101,8 @@ models <- lapply(traits, function(trait) {
 })
 
 #----
-
 library(gremlin)
 library(nadiv)
-
-
 
 pedigree<- df[,c("f.ind","Mom")]
 names(pedigree)<- c("id", "dam")
@@ -66,101 +142,6 @@ old <- options(contrasts=c("contr.sum","contr.poly"))
 # 
 # #tutorial
 # #  https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/j.1365-2656.2009.01639.x
-
-#--------------
-#install.packages("pedigree")
-library(MCMCglmm)
-library(pedigree)
-library(MasterBayes)
-
-df<- tpc.sel[which(tpc.sel$period=="past"),-which(colnames(tpc.sel)%in% c("FecEggCount"))]
-df<- na.omit(df)
-names(df)[c(1)]<- c("mother")
-#make new id
-df$id<- 1: nrow(df)
-
-#make pedigree matrix
-pedigree<- df[,c("id", "mother")]
-pedigree$father<- "NA"
-
-# Manual pedigree completion
-all_parents <- unique(c(pedigree$mother, pedigree$father))
-missing_ids <- setdiff(all_parents, pedigree$id)
-pedigree <- rbind(pedigree, 
-                       data.frame(id=missing_ids, mother=NA, father=NA))
-
-#------
-# Define priors for multivariate model (5 traits)
-ntrait <- 5
-prior_multivar <- list(
-  R = list(V = diag(ntrait), nu = 0.002),
-  G = list(G1 = list(V = diag(ntrait)*0.02, nu = ntrait),  # Animal effect
-           G2 = list(V = diag(ntrait)*0.02, nu = ntrait))  # Maternal effect
-)
-
-# Fit multivariate animal model
-model <- MCMCglmm(
-  fixed = cbind(RGR11, RGR17, RGR23, RGR29, RGR35) ~ 1,
-  random = ~ us(trait):id + us(trait):mother,
-  rcov = ~ us(trait):units,
-  family = rep("gaussian", 5),
-  pedigree = pedigree,
-  data = df,
-  prior = prior_multivar,
-  nitt = 60000,
-  burnin = 10000,
-  thin = 25,
-  verbose = FALSE
-)
-
-# Extract posterior means for G and P matrices
-G_matrix <- apply(model$VCV[, grep("animal", colnames(model$VCV))], 2, mean)
-dim(G_matrix) <- c(ntrait, ntrait)
-
-P_matrix <- apply(model$VCV[, grep("units", colnames(model$VCV))], 2, mean) + 
-  apply(model$VCV[, grep("mother", colnames(model$VCV))], 2, mean) + 
-  G_matrix
-
-
-#----
-dim(P_matrix) <- c(ntrait, ntrait)
-
-
-# Extract G matrix (additive genetic variance-covariance matrix)
-G_matrix <- matrix(colMeans(model$VCV[,grep("animal", colnames(model$VCV))]), 6, 6)
-
-# Extract P matrix (phenotypic variance-covariance matrix)
-P_matrix <- matrix(colMeans(model$VCV), 6, 6)
-
-#or this?
-# Genetic (G) matrix (6x6)
-G_matrix <- apply(model$VCV[, grep("individual", colnames(model$VCV))], 
-                  2, posterior.mode)
-G_matrix <- matrix(G_matrix, nrow=6)
-
-# Phenotypic (P) matrix = G + residual
-P_matrix <- G_matrix + apply(model$VCV[, grep("units", colnames(model$VCV))], 
-                             2, posterior.mode)
-P_matrix <- matrix(P_matrix, nrow=6)
-
-#----
-#https://rdrr.io/cran/evolqg/man/RandomSkewers.html
-# Compare G and P matrices using Random Skewers
-matrix_similarity <- RandomSkewers(G_matrix, P_matrix)
-# Decompose G-matrix to identify major axes of variation
-srd_results <- SRD(G_matrix, P_matrix)
-
-#Mantel Test: Tests matrix element correlations while accounting for trait dependencies:
-mantel_results <- MantelCor(G_matrix, P_matrix)
-
-#Krzanowski's Comparison: Compares subspaces spanned by matrices' eigenvectors:
-krz_results <- KrzCor(G_matrix, P_matrix)
-
-#PCA Similarity: Quantifies overlap in major axes of variation:
-pca_sim <- PCASimilarity(G_matrix, P_matrix)
-
-#Bayesian Framework: Compare posterior distributions of matrices:
-bayes_compare <- BayesianMatrixCompare(G_samples, P_samples)
 
 #--------------------
 ## Variance covariance analysis

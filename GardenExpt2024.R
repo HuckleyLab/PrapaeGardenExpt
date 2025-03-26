@@ -574,6 +574,58 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   dev.off()
   
   #-----------------------------
+  #Variance covariance analysis
+  
+  library(MCMCglmm)
+  
+  df<- tpc.sel[which(tpc.sel$period=="past"),-which(colnames(tpc.sel)%in% c("FecEggCount"))]
+  df<- na.omit(df)
+  names(df)[c(1)]<- c("mother")
+  #make new id
+  df$id<- 1: nrow(df)
+  
+  # Define priors for multivariate model (5 traits)
+  ntrait <- 5
+  prior_multivar <- list(
+    R = list(V = diag(ntrait), nu = 0.002),
+    G = list(G1 = list(V = diag(ntrait)*0.02, nu = ntrait),  # Animal effect
+             G2 = list(V = diag(ntrait)*0.02, nu = ntrait))  # Maternal effect
+  )
+  
+  # Fit multivariate animal model
+  model <- MCMCglmm(
+    fixed = cbind(RGR11, RGR17, RGR23, RGR29, RGR35) ~ 1,
+    random = ~ us(trait):id + us(trait):mother,
+    rcov = ~ us(trait):units,
+    family = rep("gaussian", 5),
+    #pedigree = pedigree,
+    data = df,
+    prior = prior_multivar,
+    nitt = 60000,
+    burnin = 10000,
+    thin = 25,
+    verbose = FALSE
+  )
+  
+  # Extract posterior means for G and P matrices
+  G_matrix <- apply(model$VCV[, grep("id", colnames(model$VCV))], 2, mean)
+  dim(G_matrix) <- c(ntrait, ntrait)
+  
+  P_matrix <- apply(model$VCV[, grep("units", colnames(model$VCV))], 2, mean) + 
+    apply(model$VCV[, grep("mother", colnames(model$VCV))], 2, mean) + 
+    G_matrix
+  dim(P_matrix) <- c(ntrait, ntrait)
+  
+  #G and P matrices
+  g.mat.bh <- melt(G_matrix)
+  p.mat.bh <- melt(P_matrix)
+  
+  gts<- c("RGR11","RGR17","RGR23","RGR29","RGR35")
+  g.mat.bh$Var1<- gts[g.mat.bh$Var1]
+  g.mat.bh$Var2<- gts[g.mat.bh$Var2]
+  p.mat.bh$Var1<- gts[p.mat.bh$Var1]
+  p.mat.bh$Var2<- gts[p.mat.bh$Var2]
+  
   #But: a quick and dirty method is probably sufficient for now:  compute mean values for each family at each temperature, and then use the var function is compute the var-covariance matrix on the family means.  This is the least-squares estimate of the broad sense G matrix.  Using var on the individual values gives the comparable estimate of the P (phenotypic) matrix.  These should give a good approximation to the REML estimates (which are constrained so that you don’t get variances< 0 ).
   
   #CURRENT
@@ -626,6 +678,7 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   p.mat.m$type<- "P"; p.mat.m$time<- "recent"
   g.mat.m.h$type<- "G"; g.mat.m.h$time<- "past"
   p.mat.m.h$type<- "P"; p.mat.m.h$time<- "past"
+  
   var.all<- rbind(g.mat.m, p.mat.m, g.mat.m.h, p.mat.m.h)
   var.all$Var1 <- sub("rgr_", "RGR", var.all$Var1)
   var.all$Var2 <- sub("rgr_", "RGR", var.all$Var2)
@@ -657,6 +710,20 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   pdf("PrapaeTPC_cov.pdf",height = 10, width = 10)
   plot.var
   dev.off()
+  
+  #-----------------
+  #compare Bayesian fit
+  g.mat.bh$type<- "G"; g.mat.bh$time<- "past b"
+  p.mat.bh$type<- "P"; p.mat.bh$time<- "past b"
+  
+  var.b<- rbind(g.mat.bh, p.mat.bh)
+  var.b$Var1 <- sub("rgr_", "RGR", var.b$Var1)
+  var.b$Var2 <- sub("rgr_", "RGR", var.b$Var2)
+  
+  plot.varb= ggplot(data = var.b, aes(x=Var1, y=Var2, fill=value)) + 
+    geom_tile()+
+    facet_grid(type~.)+
+    scale_fill_gradient2(low ="orange", high = "blue", space = "Lab")
   
   #----------
   #Correlation plot
