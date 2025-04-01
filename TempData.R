@@ -17,7 +17,7 @@ library(readxl)
 #Taylor version: https://github.com/taylorhatcher/WARP2024/tree/main
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
@@ -41,6 +41,10 @@ temp.1997$dt<- temp.1997$Date + temp.1997$hr/24 + temp.1997$min/(24*60)
 temp.1999= read.csv("FormattedHistoricMetDataFieldSln.csv") #8/18-8/25
 temp.1999$hr<- as.numeric(str_sub(temp.1999$LONGTIME,-5,-4))
 temp.1999$dt<- temp.1999$JDATE + as.numeric(str_sub(temp.1999$LONGTIME,-5,-4))/24 +as.numeric(str_sub(temp.1999$LONGTIME,-2,-1))/(24*60)
+
+temp.1999e= read.csv("UWCUH.MetData.jul_aug1999.csv") #DOY 209-217; 7/29 - 8/5
+temp.1999e$hr<- as.numeric(str_sub(temp.1999e$TIME,-4,-3))
+temp.1999e$dt<- temp.1999e$JDATE + as.numeric(str_sub(temp.1999e$TIME,-4,-3))/24 +as.numeric(str_sub(temp.1999e$TIME,-2,-1))/(24*60)
 
 #2024
 temp.2024= read.csv("combined_loggers_2024.csv") #6/21 - 8/18
@@ -74,6 +78,12 @@ t1997.l$Year<- 1997
 t1999.l <-  temp.1999[,c("dt","DATE","TIME","hr","Variable", "Value","YEAR")]
 names(t1999.l) <- c("dt","Date","Time","hr","T", "value","Year")
 
+#Plot earlier 1999 data?
+t1999e.l <- melt(temp.1999e[,c("dt","JDATE","TIME","hr","TM1","TM2","TM3","TM4","TM5","TM6","TM7","TM8","TM9","TM10",
+                               "TM11","TM12","TM13","TM14","TM15","TM16","TM17","TM18","TM19","TM20")], id.vars = c("dt","JDATE","TIME","hr"), variable.name = "T")
+t1999e.l$Year<- 1999
+names(t1999e.l) <- c("dt","Date","Time","hr","T", "value","Year")
+
 t2024.l <- melt(temp.2024[,c("dt","Date","Time", "hr", "Logger1.T1","Logger1.T2","Logger1.T3","Logger1.T4","Logger2.T1","Logger2.T2","Logger2.T3","Logger2.T4","Logger3.T1","Logger3.T2","Logger3.T3","Logger3.T4.shadedT")], id.vars = c("dt","Date","Time","hr"), variable.name = "T")
 #drop NAs
 t2024.l<- t2024.l[which(!is.na(t2024.l$value)),]
@@ -85,7 +95,7 @@ t2023.l<- t2023.l[which(!is.na(t2023.l$value)),]
 t2023.l$Year<- 2023
 
 #combine
-tdat<- rbind(t1997.l, t1999.l, t2024.l, t2023.l)
+tdat<- rbind(t1997.l, t1999.l, t1999e.l, t2024.l, t2023.l)
 
 #----------------
 #Plot time series

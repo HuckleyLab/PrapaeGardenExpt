@@ -8,7 +8,7 @@ library(nlme)
 library(lme4)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -431,6 +431,10 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #Kingsolver, Gomulkiewicz, and Carter 2001
   #  The components of a selection gradient represent the direct strength of selection on each trait, adjusting for the phenotypic correlations among the traits; they can be readily estimated with partial regression analyses,
   
+  #From JGKL: For the figure in the Genetica paper, the selection gradients were standardized, with RGR at each temperature standardized to mean = 0 and SD = 1;  similarly each fitness metric (pupal mass, development rate, and survival) was standardized to mean = 1. For survival this means that the (relative) fitness of survivors depends strongly the proportion surviving to pupation: e.g. if overall survival to pupation is 50%, then the relative fitness of survivors and non-survivors is 2 and 0, respectively.
+  #One thing I’m not sure about: for pupal mass and development rate, RGR may have been standardized to mean and SD for ALL individuals (including those that didn’t survive to pupate) or only for pupate.  I don’t have the actual analyses, only some of the intermediate datasets using in analyses.
+  #For our current paper I still think we should use values NOT standardized by SD, since they are all the same trait  (RGR) and I think this is what the model in the 2003 ICB paper used (I will re-read to check this). 
+  
   #ESTIMATE SELECTION GRADIENT
   
   #combine wide data
@@ -444,19 +448,41 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #combine time periods
   tpc.sel<- rbind(tpc[,match(colnames(tpc.h2), colnames(tpc))] , tpc.h2)
   
+  #remove RGR for individuals that don't survive
+  tpc.sel$RGR11s <- tpc.sel$RGR11
+  tpc.sel$RGR11s[which(is.na(tpc.sel$pupal_massmg))] <- NA
+  
+  tpc.sel$RGR17s <- tpc.sel$RGR17
+  tpc.sel$RGR17s[which(is.na(tpc.sel$pupal_massmg))] <- NA
+  
+  tpc.sel$RGR23s <- tpc.sel$RGR23
+  tpc.sel$RGR23s[which(is.na(tpc.sel$pupal_massmg))] <- NA
+  
+  tpc.sel$RGR29s <- tpc.sel$RGR29
+  tpc.sel$RGR29s[which(is.na(tpc.sel$pupal_massmg))] <- NA
+  
+  tpc.sel$RGR35s <- tpc.sel$RGR35
+  tpc.sel$RGR35s[which(is.na(tpc.sel$pupal_massmg))] <- NA
+  
   #normalize RGR response to +- 1SD
   #normalize fitness metrics to mean of 1, normalize proportionally?
   tpc.sel1 <- tpc.sel %>% 
     group_by(period, expt) %>% 
-    dplyr::mutate(RGR11_scale = scale(RGR11, center=TRUE, scale=FALSE),
-                     RGR17_scale = scale(RGR17, center=TRUE, scale=FALSE),
-                     RGR23_scale = scale(RGR23, center=TRUE, scale=FALSE),
-                     RGR29_scale = scale(RGR29, center=TRUE, scale=FALSE),
-                     RGR35_scale = scale(RGR35, center=TRUE, scale=FALSE), 
+    dplyr::mutate(RGR11_scale = scale(RGR11, center=TRUE, scale=TRUE),
+                     RGR17_scale = scale(RGR17, center=TRUE, scale=TRUE),
+                     RGR23_scale = scale(RGR23, center=TRUE, scale=TRUE),
+                     RGR29_scale = scale(RGR29, center=TRUE, scale=TRUE),
+                     RGR35_scale = scale(RGR35, center=TRUE, scale=TRUE), 
+                  RGR11s_scale = scale(RGR11s, center=TRUE, scale=TRUE),
+                  RGR17s_scale = scale(RGR17s, center=TRUE, scale=TRUE),
+                  RGR23s_scale = scale(RGR23s, center=TRUE, scale=TRUE),
+                  RGR29s_scale = scale(RGR29s, center=TRUE, scale=TRUE),
+                  RGR35s_scale = scale(RGR35s, center=TRUE, scale=TRUE),
                      surv_norm = surv / mean(surv, na.rm = TRUE),
                      puptime_norm = puptime / mean(puptime, na.rm = TRUE),
                      pupal_massmg_norm = pupal_massmg / mean(pupal_massmg, na.rm = TRUE),
-                     FecEggCount_norm = FecEggCount / mean(FecEggCount, na.rm = TRUE) ) %>%
+                     FecEggCount_norm = FecEggCount / mean(FecEggCount, na.rm = TRUE)
+                  ) %>%
     ungroup()
   
   tpc.sel1<- as.data.frame(tpc.sel1)
@@ -467,7 +493,7 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   expts<- c("june","july","aug")
   periods<- c("recent","recent","past")
   rgrs<- c("RGR11","RGR17","RGR23","RGR29","RGR35")
-  fitcomp<- c("mass","surv","puptime", "fec")
+  fitcomp<- c("mass","surv","puptime", "fec", "mass.s","surv.s","puptime.s")
   
   sg= expand.grid(rgrs, expts, fitcomp)
   sg= as.data.frame(cbind( sg,matrix(NA, nrow=nrow(sg), ncol=4)))
@@ -485,18 +511,30 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     mod.pmass <- lm(pupal_massmg_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub)
     coef.pmass<- summary(mod.pmass)$coefficients
     
+    #only surviving individuals
+    mod.pmass.s <- lm(pupal_massmg_norm ~ RGR11s_scale +RGR17s_scale +RGR23s_scale +RGR29s_scale +RGR35s_scale, data = tpc.sub)
+    coef.pmass.s<- summary(mod.pmass.s)$coefficients
+    
+    coef.surv.s<- NA
     try({
     #mod.surv <- lme(surv_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
     #coef.surv<- summary(mod.surv)$tTable
     mod.surv <- lm(surv_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub)
     coef.surv<- summary(mod.surv)$coefficients
     
+    #only surviving individuals
+    mod.surv.s <- lm(surv_norm ~ RGR11s_scale +RGR17s_scale +RGR23s_scale +RGR29s_scale +RGR35s_scale, data = tpc.sub)
+    coef.surv.s<- summary(mod.surv.s)$coefficients
     })
     
     #mod.puptime <- lme(puptime_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
     #coef.puptime<- summary(mod.puptime)$tTable
     mod.puptime <- lm(puptime_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub)
     coef.puptime<- summary(mod.puptime)$coefficients
+    
+    #only surviving individuals
+    mod.puptime.s <- lm(puptime ~ RGR11s_scale +RGR17s_scale +RGR23s_scale +RGR29s_scale +RGR35s_scale, data = tpc.sub)
+    coef.puptime.s<- summary(mod.puptime.s)$coefficients
     
     #save coefficients
     #for lme
@@ -508,6 +546,11 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     sg[which(sg$expt==expts[k] & sg$fitcomp=="mass"),c(4:7)]= coef.pmass[2:nrow(coef.pmass),]
     sg[which(sg$expt==expts[k] & sg$fitcomp=="surv"),c(4:7)]= coef.surv[2:nrow(coef.surv), ]
     sg[which(sg$expt==expts[k] & sg$fitcomp=="puptime"),c(4:7)]= coef.puptime[2:nrow(coef.puptime), ]
+    
+    #only survivors
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="mass.s"),c(4:7)]= coef.pmass.s[2:nrow(coef.pmass.s),]
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="surv.s"),c(4:7)]= coef.surv.s[2:nrow(coef.surv.s), ]
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="puptime.s"),c(4:7)]= coef.puptime.s[2:nrow(coef.puptime.s), ]
     
     #fecundity
     if(nrow(tpc.sub.f)>0){
