@@ -8,7 +8,7 @@ library(nlme)
 library(lme4)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -293,30 +293,8 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   tpc.gl$expt[grepl("june", tpc.gl$f.ind, ignore.case = FALSE, perl = FALSE,
                     fixed = FALSE, useBytes = FALSE)]<- "june"
   
-  #plot
-  plot.pm= ggplot(tpc.gl, aes(x=value,y=pupal_massmg)) + 
-    facet_grid(expt~temp)+
-    geom_point()+geom_smooth(method="lm")
-  
-#=======
-  #fecundity
-  plot.fec= ggplot(tpc.gl, aes(x=value,y=FecEggCount)) + 
-    facet_grid(expt~temp)+
-    geom_point()+geom_smooth(method="lm")
-  
-  #survival
-  plot.surv= ggplot(tpc.gl, aes(x=value,y=surv)) + 
-    facet_grid(expt~temp)+
-    geom_point()+geom_smooth(method="lm")
-  
-  #time to pupation
-  plot.ttp= ggplot(tpc.gl, aes(x=value,y=puptime)) + 
-    facet_grid(expt~temp)+
-    geom_point()+geom_smooth(method="lm")
-  
   #----------------------
   #plot historic data
-  
   tpc.h= read.csv("PrapaeUW.Seln2.1999.Combineddata.OPUS2021.csv")
   
   tpc.h$f.ind= paste(tpc.h$Mom, tpc.h$ID, sep="_")
@@ -331,27 +309,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   tpc.gl.h <- melt(tpc.h2, id.vars = c("Mom", "ID", "f.ind", "expt","pupal_massmg","FecEggCount", "surv", "puptime"), variable.name = "temp")
   tpc.gl.h$temp= as.numeric(gsub("RGR","",tpc.gl.h$temp))
   
-  #garden outcomes
-  #pupal mass
-  plot.pm.h= ggplot(tpc.gl.h, aes(x=value,y=pupal_massmg)) + 
-    facet_grid(expt~temp)+
-    geom_point()+geom_smooth(method="lm")
-  
-  #fecundity
-  plot.fec.h= ggplot(tpc.gl.h, aes(x=value,y=FecEggCount)) + 
-    facet_grid(expt~temp)+
-    geom_point()+geom_smooth(method="lm")
-  
-  #survival
-  plot.surv.h= ggplot(tpc.gl.h, aes(x=value,y=surv)) + 
-    facet_grid(expt~temp)+
-    geom_point()+geom_smooth(method="lm")
-  
-  #time to pupation
-  plot.ttp.h= ggplot(tpc.gl.h, aes(x=value,y=puptime)) + 
-    facet_grid(expt~temp)+
-    geom_point()+geom_smooth(method="lm")
-  
   #----------------------
   #historic and recent pupal mass
   tpc.gl.all<- as.data.frame(rbind(tpc.gl[,c("expt","pupal_massmg","temp","surv", "puptime", "FecEggCount","value")], tpc.gl.h[,c("expt","pupal_massmg","temp","surv", "puptime", "FecEggCount","value")]))
@@ -365,8 +322,9 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #tpc.gl.all<- tpc.gl.all[-which(is.na(tpc.gl.all[,"pupal_massmg"])),]
   #tpc.gl.all<- tpc.gl.all[-which(is.na(tpc.gl.all[,"temp"])),]
   
-  #------------------
-  #Plot
+  #---------------
+  #selection plot
+  
   plot.pm.b<- ggplot(tpc.gl.all, aes(x=value,y=pupal_massmg)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
@@ -478,6 +436,10 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
                   RGR23s_scale = scale(RGR23s, center=TRUE, scale=TRUE),
                   RGR29s_scale = scale(RGR29s, center=TRUE, scale=TRUE),
                   RGR35s_scale = scale(RGR35s, center=TRUE, scale=TRUE),
+                  #try scaling response metrics to SD=1
+                  surv= scale(surv, center=FALSE, scale=TRUE),
+                  puptime= scale(puptime, center=FALSE, scale=TRUE),
+                  pupal_massmg= scale(pupal_massmg, center=FALSE, scale=TRUE),
                      surv_norm = surv / mean(surv, na.rm = TRUE),
                      puptime_norm = puptime / mean(puptime, na.rm = TRUE),
                      pupal_massmg_norm = pupal_massmg / mean(pupal_massmg, na.rm = TRUE),
@@ -533,7 +495,7 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     coef.puptime<- summary(mod.puptime)$coefficients
     
     #only surviving individuals
-    mod.puptime.s <- lm(puptime ~ RGR11s_scale +RGR17s_scale +RGR23s_scale +RGR29s_scale +RGR35s_scale, data = tpc.sub)
+    mod.puptime.s <- lm(puptime_norm ~ RGR11s_scale +RGR17s_scale +RGR23s_scale +RGR29s_scale +RGR35s_scale, data = tpc.sub)
     coef.puptime.s<- summary(mod.puptime.s)$coefficients
     
     #save coefficients
@@ -572,22 +534,49 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   colnames(sg)[6:7]<- c("tvalue","pvalue")
   sg$sig<- ifelse(sg$pvalue<=0.05, "sig", "ns")
   
-  plot.sg<- ggplot(sg, aes(x=temp, y=value, color=fitcomp, fill=sig, group=fitcomp)) + 
-    geom_point(size=4, pch=21)+ geom_smooth()+
+  #change timeperiod names
+  sg$expt <- expts.lab[match(sg$expt,expts)]
+  sg$expt <- factor(sg$expt, levels= c("Aug 1999","June 2024","July 2024"), ordered=TRUE)
+  
+  #Genetica plot, include only pupating individuals
+  plot.sg<- ggplot(sg[which(sg$fitcomp %in% c("mass.s", "surv.s", "puptime.s")),], aes(x=temp, y=value, color=fitcomp, fill=sig, group=fitcomp)) + 
+    geom_point(size=4, pch=21)+ geom_smooth(se=FALSE)+
     facet_wrap(.~expt)+
     ylab("Selection gradient") +xlab("Temperature (C)")+
     scale_color_viridis_d()+
     #ylim(-0.12, 0.12)+
     theme_classic()+
-    scale_fill_manual(values = c("sig" = "gray", "ns" = "white"))
-
+    scale_fill_manual(values = c("sig" = "gray", "ns" = "white"))+
+  #add standard errors
+  geom_errorbar(aes(x=temp, y=value, ymin=value-se, ymax=value+se), width=0)
+  
   pdf("Prapae_selectiongradients.pdf",height = 6, width = 10)
   plot.sg
   dev.off()
   
   #or gsg package
   #https://cran.r-project.org/src/contrib/Archive/gsg/
+
+  #plot models
+  car::avPlots(mod.pmass.s)
+  car::avPlots(mod.puptime.s)
   
+#------------------------
+  #plot coefficients
+  
+  keep= c("Mom","ID","f.ind","expt","RGR11s_scale","RGR17s_scale","RGR23s_scale","RGR29s_scale","RGR35s_scale", "surv_norm","puptime_norm","pupal_massmg_norm","FecEggCount_norm")
+  
+  #to long format
+  tpc.gl.h2 <- melt(tpc.sel1[,colnames(tpc.sel1) %in% keep], id.vars = c("Mom", "ID", "f.ind", "expt","surv_norm","puptime_norm","pupal_massmg_norm","FecEggCount_norm"), variable.name = "temp")
+  tpc.gl.h2$temp= gsub("RGR","",tpc.gl.h2$temp)
+  tpc.gl.h2$temp= as.numeric(gsub("s_scale","",tpc.gl.h2$temp))
+  
+  plot.pm.b<- ggplot(tpc.gl.h2, aes(x=value,y=pupal_massmg_norm)) + 
+    facet_grid(expt~temp)+
+    geom_point()+geom_smooth(method="lm")+
+    ylab("Pupal mass (mg)") +xlab("RGR (g/g/h)")+
+    theme_bw()
+  #FIX
 #-------
   # Plot trait changes
   
