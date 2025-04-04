@@ -6,7 +6,6 @@ library(reshape2)
 library(viridis)
 library(nlme)
 library(lme4)
-library(stringr)
 library(ggridges)
 
 # Load required libraries
@@ -14,89 +13,14 @@ library(lubridate)
 library(tidyr)
 library(readxl)
 
-#Taylor version: https://github.com/taylorhatcher/WARP2024/tree/main
-
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
-if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
-if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/WeatherData/")
+#load data
+if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
+if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 
-#1997
-temp.1997= read.csv("CUH.metdata.1997_viii12_19.csv") #8/12 - 8/26
-temp.1997$Period<- 1
-temp2.1997= read.csv("CUH.metdata.1997_viii20_26.csv")
-temp2.1997$Period<- 2
-temp.1997= rbind(temp.1997,temp2.1997)
-#format time
-min <- str_sub(temp.1997$Time,-2,-1)
-min[min %in% c("0","5")]<- paste("0", str_sub(min[min %in% c("0","5")],-1,-1), sep="")
-hr<- str_sub(temp.1997$Time,-4,-3)
-hr[hr==""]<- "0"
-temp.1997$hm<- paste(hr, min, sep=":")
-temp.1997$hr<- as.numeric(hr); temp.1997$min<- as.numeric(min)
-temp.1997$dt<- temp.1997$Date + temp.1997$hr/24 + temp.1997$min/(24*60)
-
-#1999
-temp.1999= read.csv("FormattedHistoricMetDataFieldSln.csv") #8/18-8/25
-temp.1999$hr<- as.numeric(str_sub(temp.1999$LONGTIME,-5,-4))
-temp.1999$dt<- temp.1999$JDATE + as.numeric(str_sub(temp.1999$LONGTIME,-5,-4))/24 +as.numeric(str_sub(temp.1999$LONGTIME,-2,-1))/(24*60)
-
-temp.1999e= read.csv("UWCUH.MetData.jul_aug1999.csv") #DOY 209-217; 7/29 - 8/5
-temp.1999e$hr<- as.numeric(str_sub(temp.1999e$TIME,-4,-3))
-temp.1999e$dt<- temp.1999e$JDATE + as.numeric(str_sub(temp.1999e$TIME,-4,-3))/24 +as.numeric(str_sub(temp.1999e$TIME,-2,-1))/(24*60)
-
-#2024
-temp.2024= read.csv("combined_loggers_2024.csv") #6/21 - 8/18
-#format time  
-jday<- as.numeric(format(as.Date(temp.2024$datetime, format = "%Y-%m-%d %H:%M:%S"), "%j"))
-temp.2024$hr<- as.numeric(format(strptime(temp.2024$datetime, format = "%Y-%m-%d %H:%M:%S"), "%H"))
-min<- as.numeric(format(strptime(temp.2024$datetime, format = "%Y-%m-%d %H:%M:%S"), "%M"))
-temp.2024$dt= jday +temp.2024$hr/24 + min/(24*60)
-temp.2024$Date<- format(strptime(temp.2024$datetime, format = "%Y-%m-%d %H:%M:%S"), "%Y-%m-%d")
-temp.2024$Time<- format(strptime(temp.2024$datetime, format = "%Y-%m-%d %H:%M:%S"), "%H:%M")
-
-#2023
-#Data processed here: https://github.com/taylorhatcher/WARP2023Analysis
-temp.2023= read.csv("ToptExpt1_2023.csv") 
-temp.2023$expt<- 1
-temp.2023.2= read.csv("ToptExpt2_2023.csv") 
-temp.2023.2$expt<- 2
-#combine
-temp.2023<- rbind(temp.2023, temp.2023.2)
-
-jday<- as.numeric(format(as.Date(temp.2023$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
-temp.2023$hr<- as.numeric(format(strptime(temp.2023$Date, format = "%Y-%m-%d %H:%M:%S"), "%H"))
-min<- as.numeric(format(strptime(temp.2023$Date, format = "%Y-%m-%d %H:%M:%S"), "%M"))
-temp.2023$dt= jday +temp.2023$hr/24 + min/(24*60)
-
-#------------------------------
-#change to long format and combine
-t1997.l <- melt(temp.1997[,c("dt","Date","Time","hr","Tm1","Tm2","Tm3","Tm4","Tm5","Tm6","Tm7","Tm8","Tm9","Tm10")], id.vars = c("dt","Date","Time","hr"), variable.name = "T")
-t1997.l$Year<- 1997
-
-t1999.l <-  temp.1999[,c("dt","DATE","TIME","hr","Variable", "Value","YEAR")]
-names(t1999.l) <- c("dt","Date","Time","hr","T", "value","Year")
-
-#Plot earlier 1999 data?
-t1999e.l <- melt(temp.1999e[,c("dt","JDATE","TIME","hr","TM1","TM2","TM3","TM4","TM5","TM6","TM7","TM8","TM9","TM10",
-                               "TM11","TM12","TM13","TM14","TM15","TM16","TM17","TM18","TM19","TM20")], id.vars = c("dt","JDATE","TIME","hr"), variable.name = "T")
-t1999e.l$Year<- 1999
-names(t1999e.l) <- c("dt","Date","Time","hr","T", "value","Year")
-
-t2024.l <- melt(temp.2024[,c("dt","Date","Time", "hr", "Logger1.T1","Logger1.T2","Logger1.T3","Logger1.T4","Logger2.T1","Logger2.T2","Logger2.T3","Logger2.T4","Logger3.T1","Logger3.T2","Logger3.T3","Logger3.T4.shadedT")], id.vars = c("dt","Date","Time","hr"), variable.name = "T")
-#drop NAs
-t2024.l<- t2024.l[which(!is.na(t2024.l$value)),]
-t2024.l$Year<- 2024
-
-t2023.l <- melt(temp.2023[,c("dt","Date","Time", "hr", "shade1", "sun2", "shade3", "sun4", "sun5", "shade6", "sun7", "shade8")], id.vars = c("dt","Date","Time","hr"), variable.name = "T")
-#drop NAs
-t2023.l<- t2023.l[which(!is.na(t2023.l$value)),]
-t2023.l$Year<- 2023
-
-#combine
-tdat<- rbind(t1997.l, t1999.l, t1999e.l, t2024.l, t2023.l)
-
+tdat<- read.csv(tdat, "PrapaeGardenTemps_WARP.csv")
 #----------------
 #Plot time series
 ggplot(tdat, aes(x=dt,y=value, color=T)) + 

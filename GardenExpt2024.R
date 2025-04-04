@@ -13,351 +13,156 @@ desktop<- "n"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 
-tpc1= read.csv("2024_06_20_tpc_field_seln_june.csv")
-tpc1 <- tpc1[,-c(44)]
-tpc1$expt<- "june"
+#load data
+tpc<- read.csv("PrapaeGardenExpt_WARP.csv")
+#drop unneeded columns
+tpc<- tpc[,-which(colnames(tpc) %in% c("X", "Species", "Population", "Study.Site"))]
 
-tpc2= read.csv("2024_07_27_tpc_field_seln_july_batch_1.csv")
-tpc2<- tpc2[,-which(colnames(tpc2)=="X29.notes.1")]
-tpc3= read.csv("2024_07_28_tpc_field_seln_july_batch_2.csv")
-tpc3<- tpc3[,-which(colnames(tpc3)=="X11.notes.1")]
-tpc2= rbind(tpc2, tpc3)
-tpc2$expt<- "july"
-tpc2<- cbind(3, tpc2)
-colnames(tpc2)[1]<- "Batch"
-tpc2<- tpc2[,-which(colnames(tpc2)=="X23.notes.1")]
 
-tpc= rbind(tpc1, tpc2)
+#update experiment labels
+expts<- c("june","july","aug")
+expts.lab<- c("June 2024","July 2024","Aug 1999")
 
-#restrict to observations
-tpc= tpc[!is.na(tpc$FEMALE),]
-tpc= as.data.frame(tpc)
-
-length(which(tpc$X23.mass.i<10)) # none less than 10mg
-#take out
-#tpc= tpc[-which(tpc$X23.mass.i<10),]
-
-#estimate RGR = [log10(m f) -log10(m i)]/(t f − t i )
-#forumulas in papers specify ln, but magnitude is too high
-
-#tpc<- tpc[which(tpc$expt=="july"),]
-
-#----
-#fix formatting issues
-# 23,11,29,35,17
-#tpc[grep(":",tpc$X17.mass.f),]
-tpc$X23.mass.f[133]<- 15.44
-tpc$X11.mass.i[133]<- 15.44
-tpc$X23.mass.f[139]<- 14.41
-
-#fill in blank final times with weighing time
-tpc$X11.time.f[which(is.na(tpc$X11.time.f))]<- tpc$weigh.time.2[which(is.na(tpc$X11.time.f))]
-tpc$X29.time.f[which(is.na(tpc$X29.time.f))]<- tpc$weigh.time.3[which(is.na(tpc$X29.time.f))]
-tpc$X35.time.f[which(is.na(tpc$X35.time.f))]<- tpc$weigh.time.4[which(is.na(tpc$X35.time.f))]
-tpc$X17.time.f[which(is.na(tpc$X17.time.f))]<- tpc$weigh.time.5[which(is.na(tpc$X17.time.f))]
-#fill in blank initial time with last weighing time
-tpc$X29.time.i[which(is.na(tpc$X29.time.i))]<- tpc$X11.time.f[which(is.na(tpc$X29.time.i))]
-
-#----
-#estimate growth rate
-tpc$rgr_23= (log10(as.numeric(tpc$X23.mass.f)*0.001)-log10(as.numeric(tpc$X23.mass.i)*0.001))/
-  as.numeric(difftime(as.POSIXct(tpc$X23.time.f,format="%H:%M"), as.POSIXct(tpc$X23.time.i,format="%H:%M"), units='hours'))
-
-tpc$rgr_29= (log10(as.numeric(tpc$X29.mass.f)*0.001)-log10(as.numeric(tpc$X29.mass.i)*0.001))/
-  as.numeric(difftime(as.POSIXct(tpc$X29.time.f,format="%H:%M"), as.POSIXct(tpc$X29.time.i,format="%H:%M"), units='hours'))
-
-#overnight
-tpc$rgr_11= (log10(as.numeric(tpc$X11.mass.f)*0.001)-log10(as.numeric(tpc$X11.mass.i)*0.001))/
-  as.numeric(difftime(as.POSIXct(paste("2023-06-21", tpc$X11.time.f, sep=" "),format="%Y-%m-%d %H:%M"), as.POSIXct(paste("2023-06-20", tpc$X11.time.i, sep=" "),format="%Y-%m-%d %H:%M"), units='hours'))
-
-tpc$rgr_35= (log10(as.numeric(tpc$X35.mass.f)*0.001)-log10(as.numeric(tpc$X35.mass.i)*0.001))/
-  as.numeric(difftime(as.POSIXct(tpc$X35.time.f,format="%H:%M"), as.POSIXct(tpc$X35.time.i,format="%H:%M"), units='hours'))
-
-#overnight
-tpc$rgr_17= (log10(as.numeric(tpc$X17.mass.f)*0.001)-log10(as.numeric(tpc$X17.mass.i)*0.001))/
-  as.numeric(difftime(as.POSIXct(paste("2023-06-21", tpc$X11.time.f, sep=" "),format="%Y-%m-%d %H:%M"), as.POSIXct(paste("2023-06-20", tpc$X11.time.i, sep=" "),format="%Y-%m-%d %H:%M"), units='hours'))
-
-# #account for caterpillars that didn't eat
-# tpc$rgr_23[tpc$X23.notes %in% c("O", NA)]<- NA
-# tpc$rgr_29[tpc$X29.notes %in% c("O", NA)]<- NA 
-# tpc$rgr_11[tpc$X11.notes %in% c("O", NA)]<- NA 
-# tpc$rgr_17[tpc$X17.notes %in% c("O", NA)]<- NA 
-# tpc$rgr_35[tpc$X35.notes %in% c("O", NA)]<- NA 
-
-tpc$f.ind= paste(tpc$FEMALE, tpc$INDV, tpc$expt, sep="_")
-tpc= tpc[,c("FEMALE","f.ind","StartDate","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35","expt")]
+tpc$expt <- expts.lab[match(tpc$expt,expts)]
+tpc$expt <- factor(tpc$expt, levels= c("Aug 1999","June 2024","July 2024"), ordered=TRUE)
 
 #to long format
-tpc.l <- melt(setDT(tpc[,c("FEMALE","f.ind","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35")]), id.vars = c("FEMALE","f.ind"), variable.name = "temp")
-tpc.l$temp= as.numeric(gsub("rgr_","",tpc.l$temp))
+tpc.l <- melt(tpc, id.vars = c("Mom", "ID", "f.ind", "expt","period","Mi","Pupa.wt","Fecundity", "Time.to.Pupation","Pupated","Eclosed","Time.to.Eclosion","Sex","Butt..Wt"), variable.name = "temp")
+tpc.l$temp= as.numeric(gsub("RGR","",tpc.l$temp))
 
-#plot
-tpc.plot= ggplot(tpc.l, aes(x=temp,y=value)) + #, group=f.ind
-  geom_point()
-
-#---
-#plot family mean values
+#estimate family mean values
 tpc.agg.f <- tpc.l %>% 
-  group_by(FEMALE, temp) %>% 
+  group_by(Mom, temp, expt, period) %>% 
   dplyr::summarise(mean = mean(value, na.rm = TRUE),
-            se = sd(value, na.rm = TRUE)/length(value) )
+                   se = sd(value, na.rm = TRUE)/length(value) )
 
-#add means
-tpc.plot= tpc.plot + 
-  geom_line(data=tpc.agg.f, aes(x=temp, y = mean, group=FEMALE), linewidth=1, col="darkorange")
-
-#---
-#plot mean values
+#estimate temperature mean values
 tpc.agg <- tpc.l %>% 
-  group_by(temp) %>% 
+  group_by(temp, period) %>% 
   dplyr::summarise(mean = mean(value, na.rm = TRUE),
-            se = sd(value, na.rm = TRUE)/sqrt(length(value)) )
+                   se = sd(value, na.rm = TRUE)/sqrt(length(value)) )
 
-#add means
-tpc.plot= tpc.plot + 
-  geom_errorbar(data=tpc.agg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
-  geom_point(data=tpc.agg, aes(x=temp, y = mean), size=4, col="black", fill="darkgoldenrod1", pch=21)+
+#-----------
+#FIGURE 2. TPCs comparison
+
+#Recent TPC
+tpc.r<- tpc[which(tpc$period=="recent"),]
+tpc.rl<- tpc.l[which(tpc.l$period=="recent"),]
+tpc.ragg<- tpc.agg[which(tpc.agg$period=="recent"),]
+tpc.ragg.f<- tpc.agg.f[which(tpc.agg.f$period=="recent"),]
+
+tpc.plot= ggplot(tpc.rl, aes(x=temp,y=value)) + 
+  geom_point()+
+#add family lines
+  geom_line(data=tpc.ragg.f, aes(x=temp, y = mean, group=Mom), linewidth=1, col="darkorange")+
+#add points for temperature means  
+  geom_errorbar(data=tpc.ragg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
+  geom_point(data=tpc.ragg, aes(x=temp, y = mean), size=4, col="black", fill="darkgoldenrod1", pch=21)+
   theme_bw()+xlab("Temperature (C)")+ylab("RGR (g/g/h)")+
-  ggtitle("2024") +ylim(-0.02,0.06)
+  ggtitle("2024")+ylim(-0.02,0.06)
 
-#-------------------------
-#Historic data
+#------------
+#Past TPC
+tpc.p<- tpc[which(tpc$period=="past"),]
+tpc.pl<- tpc.l[which(tpc.l$period=="past"),]
+tpc.pagg<- tpc.agg[which(tpc.agg$period=="past"),]
+tpc.pagg.f<- tpc.agg.f[which(tpc.agg.f$period=="past"),]
 
-tpc.h= read.csv("PrapaeUW.Seln2.1999.Combineddata.OPUS2021.csv")
-
-tpc.h$f.ind= paste(tpc.h$Mom, tpc.h$ID, sep="_")
-tpc.h= tpc.h[,c("Mom","f.ind","RGR23","RGR29","RGR11","RGR17","RGR35")]
-
-#to long format
-tpc.lh <- melt(setDT(tpc.h), id.vars = c("Mom","f.ind"), variable.name = "temp")
-tpc.lh$temp= as.numeric(gsub("RGR","",tpc.lh$temp))
-
-#plot
-tpc.plot.h= ggplot(tpc.lh, aes(x=temp,y=value)) + #, group=f.ind
-  geom_point()
-
-#---
-#plot family mean values
-tpc.agg.fh <- tpc.lh %>% 
-  group_by(Mom, temp) %>% 
-  dplyr::summarise(mean = mean(value, na.rm = TRUE),
-            se = sd(value, na.rm = TRUE)/length(value) )
-
-#add means
-tpc.plot.h= tpc.plot.h + 
-  geom_line(data=tpc.agg.fh, aes(x=temp, y = mean, group=Mom), size=1, col="blue1")
-
-#---
-#plot mean values
-tpc.agg.h <- tpc.lh %>% 
-  group_by(temp) %>% 
-  dplyr::summarise(mean = mean(value, na.rm = TRUE),
-            se = sd(value, na.rm = TRUE)/length(value) )
-
-#add means
-tpc.plot.h= tpc.plot.h + 
-  geom_errorbar(data=tpc.agg.h, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
-  geom_point(data=tpc.agg.h, aes(x=temp, y = mean), size=4, col="black", fill="cornflowerblue", pch=21, linewidth=2)+
+tpc.plot.p= ggplot(tpc.pl, aes(x=temp,y=value)) + 
+  geom_point()+
+  #add family lines
+  geom_line(data=tpc.pagg.f, aes(x=temp, y = mean, group=Mom), linewidth=1, col="blue1")+
+  #add points for temperature means  
+  geom_errorbar(data=tpc.pagg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
+  geom_point(data=tpc.pagg, aes(x=temp, y = mean), size=4, col="black", fill="cornflowerblue", pch=21)+
   theme_bw()+xlab("Temperature (C)")+ylab("RGR (g/g/h)")+
-  ggtitle("1999") +ylim(-0.02,0.06)
+  ggtitle("2024")+ylim(-0.02,0.06)
 
-#----------------
+#------------
 #plot TPCs over each other
+tpc.agg.f$MomPer<- paste(tpc.agg.f$Mom, tpc.agg.f$period, sep="_")
 
-#overall means
-tpc.agg$year= 2024
-tpc.agg.h$year=1999
-tpc.agg.all= rbind(tpc.agg, tpc.agg.h)
-
-#family means
-tpc.agg.f$year=2024
-tpc.agg.fh$year=1999
-colnames(tpc.agg.fh)[1]="FEMALE"
-tpc.agg.fh$FEMALE= as.character(tpc.agg.fh$FEMALE)
-tpc.agg.f$FEMALE= as.character(tpc.agg.f$FEMALE)
-tpc.agg.f.all= rbind(tpc.agg.f, tpc.agg.fh)
-tpc.agg.f.all$yrfemale= paste(tpc.agg.f.all$year, tpc.agg.f.all$FEMALE)
-
-tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
-  geom_line(aes(group=yrfemale)) +scale_color_manual(values=c("blue1", "darkorange"))
-#+scale_color_viridis_d()
-
+tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
+  geom_line(aes(group=MomPer)) +scale_color_manual(values=c("blue1", "darkorange"))+
   #add means
-  tpc.all.plot= tpc.all.plot + 
-    geom_errorbar(data=tpc.agg.all, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se, col=factor(year)), width=0)+
-    geom_point(data=tpc.agg.all, color="black", aes(x=temp, y = mean, fill=factor(year)), size=3, pch=21)+
+ geom_errorbar(data=tpc.agg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se, col=factor(period)), width=0)+
+    geom_point(data=tpc.agg, color="black", aes(x=temp, y = mean, fill=factor(period)), size=3, pch=21)+
     theme_bw()+xlab("Temperature (C)")+ylab("RGR (g/g/h)")+
     labs(color="Year")+ scale_fill_manual(values=c("cornflowerblue", "darkgoldenrod1"))+
     ggtitle("1999 & 2024") +ylim(-0.02,0.06) + guides(fill = FALSE)
   
-  #----------------
-  # Figure 2. TPC comparison
-  
-  #save figure
+#------------
+#save figure
   if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
   if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
+
   pdf("Fig2_PrapaeTPC_2024.pdf",height = 6, width = 15)
-  tpc.plot.h + tpc.plot +tpc.all.plot
+  tpc.plot.p + tpc.plot +tpc.plot.all
   dev.off()
   
   #-------------------
   #Analysis
   
-  names(tpc.lh)= names(tpc.l)
-  tpc.l$time= "current"
-  tpc.lh$time= "past"
-  tpc.b= rbind(tpc.l, tpc.lh)
+ #drop garden columns
+  tpc.b<- tpc[,c("Mom","ID","f.ind","RGR23","RGR29","RGR11","RGR17","RGR35","period")]
   tpc.b= na.omit(tpc.b)
   
-  mod= lm(value ~ time, data= tpc.b[tpc.b$temp==35,]) # 11 17 23 29 35
+  #single temp
+  mod= lm(RGR35 ~ period, data= tpc.b) # 11 17 23 29 35
   anova(mod)
   #trade-off, significant difference at 23, 29, 35
   
-  mod.lmer <- lme(value~time,random=~1|FEMALE, data = tpc.b[tpc.b$temp==35,])
+  mod.lmer <- lme(RGR35 ~ period,random=~1|Mom, data = tpc.b)
   anova(mod.lmer)
   #same significance
   
+  #across temps
+  tpc.b<- tpc.l[,c("Mom","ID","f.ind","temp","value","period")]
+  tpc.b= na.omit(tpc.b)
+  
+  mod= lm(value ~ temp*period, data= tpc.b)
+  anova(mod)
+  
+  mod.lmer <- lme(value ~ temp*period,random=~1|Mom, data = tpc.b)
+  anova(mod.lmer)
+  
   #=================================
-  # Match to field
-  
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
-  gdat= read.csv("FieldSelnExpt2024SurvivalChecks_June Experiments.csv", na.strings=c("N/A",""))
- gdat$FecCheckDate<- NA   
- gdat$FecEggCount<- NA
- gdat$FecMomAlive.<- NA
- gdat$pupaparasitized<- NA
-  gdat$expt<- "june"
-  
-  gdat2= read.csv("FieldSelnExpt2024SurvivalChecks_July Experiments.csv", na.strings=c("N/A",""))
-  gdat2$expt<- "july"
-  
-  gdat<- rbind(gdat, gdat2)
-  
-  #match TPC to field
-  gdat$f.ind<- paste(gdat$Female, gdat$Individual, gdat$expt, sep="_")
-  match1<- match(tpc$f.ind, gdat$f.ind)
-  matched<- which(!is.na(match1))
-  
-  #metrics
-  #pupal mass
-  tpc$pupal_massmg<- NA
-  tpc$pupal_massmg[matched]<- gdat$pupal_massmg[match1[matched]]
-  tpc$pupal_massmg<- as.numeric(tpc$pupal_massmg)
-  
-  #fec egg count
-  tpc$FecEggCount<- NA
-  tpc$FecEggCount[matched]<- gdat$FecEggCount[match1[matched]]
-  tpc$FecEggCount[which(tpc$FecEggCount=="13 (some aphids)")]<-"13"
-  tpc$FecEggCount<- as.numeric(tpc$FecEggCount)
-  
-  #survival 
-  gdat$surv<- 0
-  gdat$surv[which(!is.na(gdat$pupal_massmg))]<- 1
-  tpc$surv[matched]<- gdat$surv[match1[matched]]
-  tpc$surv<- as.numeric(tpc$surv)
-  
-  #pupal time
-  dates<- c("30-Jun", "1-Jul",  "29-Jun", "2-Jul",  "27-Jun", "3-Jul")
-  dates2<- c("6/30/24", "7/1/24",  "6/29/24", "7/2/24",  "6/27/24", "7/3/24")
-  match2<- match(gdat$pupacupdate, dates)
-  gdat$pupacupdate[which(!is.na(match2))]<- dates2[na.omit(match2)]
-  
-  dates<- c("9-Jul",   "8-Jul",   "10-Jul",  "11-Jul",  "12-Jul",  "6-Jul",   "7-Jul")
-  dates2<- c("7/9/24", "7/8/24",  "7/10/24", "7/11/24",  "7/12/24", "7/6/24", "7/7/24")
-  match2<- match(gdat$eclosiondate, dates)
-  gdat$eclosiondate[which(!is.na(match2))]<- dates2[na.omit(match2)]
-  
-  tpc$pupdate<- NA
-  tpc$pupdate[matched]<- gdat$pupacupdate[match1[matched]]
-
-  tpc$pupdate<- as.Date(as.character(tpc$pupdate), format="%m/%d/%y")
-  tpc$StartDate<- gsub("/24", "/2024", tpc$StartDate)
-  tpc$StartDate<- as.Date(as.character(tpc$StartDate), format="%m/%d/%Y")
-  
-  tpc$puptime<- as.double(difftime(tpc$pupdate, tpc$StartDate, units = c("days")))
+  # Selection plot
   
   #drop one outlier big pupal mass
-  tpc<- tpc[-which(tpc$pupal_massmg>275),]
+  tpc.l<- tpc.l[-which(tpc.l$Pupa.wt>275),]
   
-  #to long format
-  tpc2<- tpc[, !(names(tpc) %in% c("StartDate","pupdate"))]
-  tpc.gl <- melt(tpc2, 
-                 id.vars = c("FEMALE","f.ind","pupal_massmg","FecEggCount","surv","puptime","expt"), 
-                 variable.name = "temp")
-  tpc.gl$temp= as.numeric(gsub("rgr_","",tpc.gl$temp))
+  #selection plots
   
-  #---------
-  #find experiment
-  tpc.gl$expt<- "july"
-  tpc.gl$expt[grepl("june", tpc.gl$f.ind, ignore.case = FALSE, perl = FALSE,
-                    fixed = FALSE, useBytes = FALSE)]<- "june"
-  
-  #----------------------
-  #plot historic data
-  tpc.h= read.csv("PrapaeUW.Seln2.1999.Combineddata.OPUS2021.csv")
-  
-  tpc.h$f.ind= paste(tpc.h$Mom, tpc.h$ID, sep="_")
-  tpc.h$expt<- "aug"
-  
-  #align with recent data
-  tpc.h2<- tpc.h[,c("Mom", "ID", "f.ind", "expt", "RGR11", "RGR17", "RGR23", "RGR29", "RGR35", "Pupated", "Time.to.Pupation", "Pupa.wt", "Fecundity")] 
-  names(tpc.h2)[10:13] <- c("surv", "puptime", "pupal_massmg", "FecEggCount") 
-  #also: Eclosed, Time.to.Eclosion, Butt..Wt
-  
-  #to long format
-  tpc.gl.h <- melt(tpc.h2, id.vars = c("Mom", "ID", "f.ind", "expt","pupal_massmg","FecEggCount", "surv", "puptime"), variable.name = "temp")
-  tpc.gl.h$temp= as.numeric(gsub("RGR","",tpc.gl.h$temp))
-  
-  #----------------------
-  #historic and recent pupal mass
-  tpc.gl.all<- as.data.frame(rbind(tpc.gl[,c("expt","pupal_massmg","temp","surv", "puptime", "FecEggCount","value")], tpc.gl.h[,c("expt","pupal_massmg","temp","surv", "puptime", "FecEggCount","value")]))
-  
-  expts<- c("june","july","aug")
-  expts.lab<- c("June 2024","July 2024","Aug 1999")
-  
-  tpc.gl.all$expt <- expts.lab[match(tpc.gl.all$expt,expts)]
-  tpc.gl.all$expt <- factor(tpc.gl.all$expt, levels= c("Aug 1999","June 2024","July 2024"), ordered=TRUE)
-  
-  #tpc.gl.all<- tpc.gl.all[-which(is.na(tpc.gl.all[,"pupal_massmg"])),]
-  #tpc.gl.all<- tpc.gl.all[-which(is.na(tpc.gl.all[,"temp"])),]
-  
-  #---------------
-  #selection plot
-  
-  plot.pm.b<- ggplot(tpc.gl.all, aes(x=value,y=pupal_massmg)) + 
+  plot.pm.b<- ggplot(tpc.l, aes(x=value,y=Pupa.wt)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
     ylab("Pupal mass (mg)") +xlab("RGR (g/g/h)")+
     theme_bw()
   
-  plot.surv.b<- ggplot(tpc.gl.all, aes(x=value,y=surv)) + 
+  plot.surv.b<- ggplot(tpc.l, aes(x=value,y=Pupated)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
     ylab("Survival") +xlab("RGR (g/g/h)")
   
   #survival distribution plots
-  plot.surv.histb<- ggplot(tpc.gl.all[!is.na(tpc.gl.all$surv),], aes(x=value,color=factor(surv), group=surv)) + 
+  plot.surv.histb<- ggplot(tpc.l[!is.na(tpc.l$Pupated),], aes(x=value,color=factor(Pupated), group=Pupated)) + 
     facet_grid(expt~temp)+
-    geom_density(aes(fill=factor(surv)), alpha=0.5)+
+    geom_density(aes(fill=factor(Pupated)), alpha=0.5)+
     ylab("Density") +xlab("RGR (g/g/h)")
   
-  plot.pt.b<- ggplot(tpc.gl.all, aes(x=value,y=puptime)) + 
+  plot.pt.b<- ggplot(tpc.l, aes(x=value,y=Time.to.Pupation)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
     ylab("Pupal time (day)") +xlab("RGR (g/g/h)")
   
-  plot.ec.b<- ggplot(tpc.gl.all, aes(x=value,y=FecEggCount)) + 
+  plot.ec.b<- ggplot(tpc.l, aes(x=value,y=Fecundity)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
     ylab("Egg count") +xlab("RGR (g/g/h)")
   
-  #----------------------
-  #save figure
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
-  
-  #Figure 3. selection
+  #-------
+  #save figures
   pdf("Fig3_GardenSelection.pdf",height = 8, width = 11)
   plot.pm.b
   dev.off()
@@ -389,22 +194,16 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #Kingsolver, Gomulkiewicz, and Carter 2001
   #  The components of a selection gradient represent the direct strength of selection on each trait, adjusting for the phenotypic correlations among the traits; they can be readily estimated with partial regression analyses,
   
-  #From JGKL: For the figure in the Genetica paper, the selection gradients were standardized, with RGR at each temperature standardized to mean = 0 and SD = 1;  similarly each fitness metric (pupal mass, development rate, and survival) was standardized to mean = 1. For survival this means that the (relative) fitness of survivors depends strongly the proportion surviving to pupation: e.g. if overall survival to pupation is 50%, then the relative fitness of survivors and non-survivors is 2 and 0, respectively.
+  #From JGK: For the figure in the Genetica paper, the selection gradients were standardized, with RGR at each temperature standardized to mean = 0 and SD = 1;  similarly each fitness metric (pupal mass, development rate, and survival) was standardized to mean = 1. For survival this means that the (relative) fitness of survivors depends strongly the proportion surviving to pupation: e.g. if overall survival to pupation is 50%, then the relative fitness of survivors and non-survivors is 2 and 0, respectively.
   #One thing I’m not sure about: for pupal mass and development rate, RGR may have been standardized to mean and SD for ALL individuals (including those that didn’t survive to pupate) or only for pupate.  I don’t have the actual analyses, only some of the intermediate datasets using in analyses.
   #For our current paper I still think we should use values NOT standardized by SD, since they are all the same trait  (RGR) and I think this is what the model in the 2003 ICB paper used (I will re-read to check this). 
   
+  #standardization: https://doi.org/10.1525/bio.2012.62.12.6
+  
   #ESTIMATE SELECTION GRADIENT
-  
-  #combine wide data
-  inds<- match( c("FEMALE","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35" ), colnames(tpc))
-  colnames(tpc)[inds]<- c("Mom", "RGR23","RGR29","RGR11","RGR17","RGR35")
-  tpc$ID<- NA
-  tpc$period<- "recent"
-  
-  tpc.h2$period<- "past"
-  
-  #combine time periods
-  tpc.sel<- rbind(tpc[,match(colnames(tpc.h2), colnames(tpc))] , tpc.h2)
+  tpc.sel<- tpc
+  tpc.sel$surv<- tpc.sel$Pupated
+  tpc.sel$puptime<- tpc.sel$Time.to.Pupation
   
   #remove RGR for individuals that don't survive
   tpc.sel$RGR11s <- tpc.sel$RGR11
@@ -423,58 +222,65 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   tpc.sel$RGR35s[which(is.na(tpc.sel$pupal_massmg))] <- NA
   
   #normalize RGR response to +- 1SD
-  #normalize fitness metrics to mean of 1, normalize proportionally?
+  #normalize fitness metrics to mean of 1 by dividing my mean, CHECK NORMALIZATION
   tpc.sel1 <- tpc.sel %>% 
     group_by(period, expt) %>% 
-    dplyr::mutate(RGR11_scale = scale(RGR11, center=TRUE, scale=TRUE),
-                     RGR17_scale = scale(RGR17, center=TRUE, scale=TRUE),
-                     RGR23_scale = scale(RGR23, center=TRUE, scale=TRUE),
-                     RGR29_scale = scale(RGR29, center=TRUE, scale=TRUE),
-                     RGR35_scale = scale(RGR35, center=TRUE, scale=TRUE), 
-                  RGR11s_scale = scale(RGR11s, center=TRUE, scale=TRUE),
-                  RGR17s_scale = scale(RGR17s, center=TRUE, scale=TRUE),
-                  RGR23s_scale = scale(RGR23s, center=TRUE, scale=TRUE),
-                  RGR29s_scale = scale(RGR29s, center=TRUE, scale=TRUE),
-                  RGR35s_scale = scale(RGR35s, center=TRUE, scale=TRUE),
-                  #try scaling response metrics to SD=1
-                  surv= scale(surv, center=FALSE, scale=TRUE),
-                  puptime= scale(puptime, center=FALSE, scale=TRUE),
-                  pupal_massmg= scale(pupal_massmg, center=FALSE, scale=TRUE),
-                     surv_norm = surv / mean(surv, na.rm = TRUE),
-                     puptime_norm = puptime / mean(puptime, na.rm = TRUE),
-                     pupal_massmg_norm = pupal_massmg / mean(pupal_massmg, na.rm = TRUE),
-                     FecEggCount_norm = FecEggCount / mean(FecEggCount, na.rm = TRUE)
+    dplyr::mutate(
+      #standardize traits by subtracting mean
+      RGR11_ms = (RGR11-mean(RGR11, na.rm = TRUE)),
+      RGR17_ms = (RGR17-mean(RGR17, na.rm = TRUE)),
+      RGR23_ms = (RGR23-mean(RGR23, na.rm = TRUE)),
+      RGR29_ms = (RGR29-mean(RGR29, na.rm = TRUE)),
+      RGR35_ms = (RGR35-mean(RGR35, na.rm = TRUE)),
+      #standardize traits by subtracting mean and dividing by sd
+      RGR11_scale = (RGR11-mean(RGR11, na.rm = TRUE))/sd(RGR11, na.rm = TRUE),
+      RGR17_scale = (RGR17-mean(RGR17, na.rm = TRUE))/sd(RGR17, na.rm = TRUE),
+      RGR23_scale = (RGR23-mean(RGR23, na.rm = TRUE))/sd(RGR23, na.rm = TRUE),
+      RGR29_scale = (RGR29-mean(RGR29, na.rm = TRUE))/sd(RGR29, na.rm = TRUE),
+      RGR35_scale = (RGR35-mean(RGR35, na.rm = TRUE))/sd(RGR35, na.rm = TRUE),
+      #same for only survivors
+      RGR11s_scale = (RGR11-mean(RGR11s, na.rm = TRUE))/sd(RGR11s, na.rm = TRUE),
+      RGR17s_scale = (RGR17-mean(RGR17s, na.rm = TRUE))/sd(RGR17s, na.rm = TRUE),
+      RGR23s_scale = (RGR23-mean(RGR23s, na.rm = TRUE))/sd(RGR23s, na.rm = TRUE),
+      RGR29s_scale = (RGR29-mean(RGR29s, na.rm = TRUE))/sd(RGR29s, na.rm = TRUE),
+      RGR35s_scale = (RGR35-mean(RGR35s, na.rm = TRUE))/sd(RGR35s, na.rm = TRUE),
+      #scale response by dividing by mean
+      surv_norm = surv /mean(surv, na.rm = TRUE),
+      puptime_norm = puptime /mean(puptime, na.rm = TRUE),
+      Pupa.wt_norm = Pupa.wt /mean(Pupa.wt, na.rm = TRUE),
+      Fecundity_norm = Fecundity /mean(Fecundity, na.rm = TRUE)
                   ) %>%
     ungroup()
+  #Or are some means or sds used to normalize after estimating gradient?
   
   tpc.sel1<- as.data.frame(tpc.sel1)
-  tpc.sel2 <- na.omit(tpc.sel1[,!(names(tpc.sel1) %in% c("ID","FecEggCount","FecEggCount_norm"))])
+  tpc.sel2 <- na.omit(tpc.sel1[,!(names(tpc.sel1) %in% c("ID","Fecundity","Fecundity_norm"))])
   tpc.sel2f <- na.omit(tpc.sel1[,!(names(tpc.sel1) %in% c("ID"))])
   
   #set up matrix for coefficients
-  expts<- c("june","july","aug")
+  expts<- expts.lab
   periods<- c("recent","recent","past")
   rgrs<- c("RGR11","RGR17","RGR23","RGR29","RGR35")
   fitcomp<- c("mass","surv","puptime", "fec", "mass.s","surv.s","puptime.s")
   
-  sg= expand.grid(rgrs, expts, fitcomp)
+  sg= expand.grid(rgrs, expts.lab, fitcomp)
   sg= as.data.frame(cbind( sg,matrix(NA, nrow=nrow(sg), ncol=4)))
   colnames(sg)= c("rgr","expt", "fitcomp", "value", "se", "t-value", "p-value")
-  sg$period <- periods[match(sg$expt, expts)]
+  sg$period <- periods[match(sg$expt, expts.lab)]
   
   #estimate selection
-  for(k in 1:length(expts)){
+  for(k in 1:length(expts.lab)){
     #subset to experiment
-    tpc.sub<- tpc.sel2[which(tpc.sel2$expt==expts[k] & tpc.sel2$period==periods[k]),]
-    tpc.sub.f<- tpc.sel2f[which(tpc.sel2f$expt==expts[k] & tpc.sel2f$period==periods[k]),]
+    tpc.sub<- tpc.sel2[which(tpc.sel2$expt==expts.lab[k] & tpc.sel2$period==periods[k]),]
+    tpc.sub.f<- tpc.sel2f[which(tpc.sel2f$expt==expts.lab[k] & tpc.sel2f$period==periods[k]),]
     
     #mod.pmass <- lme(pupal_massmg_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub)
     #coef.pmass<- summary(mod.pmass)$tTable
-    mod.pmass <- lm(pupal_massmg_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub)
+    mod.pmass <- lm(Pupa.wt_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub)
     coef.pmass<- summary(mod.pmass)$coefficients
     
     #only surviving individuals
-    mod.pmass.s <- lm(pupal_massmg_norm ~ RGR11s_scale +RGR17s_scale +RGR23s_scale +RGR29s_scale +RGR35s_scale, data = tpc.sub)
+    mod.pmass.s <- lm(Pupa.wt_norm ~ RGR11s_scale +RGR17s_scale +RGR23s_scale +RGR29s_scale +RGR35s_scale, data = tpc.sub)
     coef.pmass.s<- summary(mod.pmass.s)$coefficients
     
     coef.surv.s<- NA
@@ -516,11 +322,11 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     
     #fecundity
     if(nrow(tpc.sub.f)>0){
-    #mod.fec <- lme(FecEggCount_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub.f)
+    #mod.fec <- lme(Fecundity_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, random=~1|Mom, data = tpc.sub.f)
     #coef.fec<- summary(mod.fec)$tTable
     #sg[which(sg$expt==expts[k] & sg$fitcomp=="fec"),c(4:7)]= coef.fec[2:nrow(coef.fec), c(1:2,4:5)]
     
-    mod.fec <- lm(FecEggCount_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub.f)
+    mod.fec <- lm(Fecundity_norm ~ RGR11_scale +RGR17_scale +RGR23_scale +RGR29_scale +RGR35_scale, data = tpc.sub.f)
     coef.fec<- summary(mod.fec)$coefficients
     sg[which(sg$expt==expts[k] & sg$fitcomp=="fec"),c(4:7)]= coef.fec[2:nrow(coef.fec), ]
     }
@@ -554,9 +360,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   plot.sg
   dev.off()
   
-  #or gsg package
-  #https://cran.r-project.org/src/contrib/Archive/gsg/
-
   #plot models
   car::avPlots(mod.pmass.s)
   car::avPlots(mod.puptime.s)
@@ -564,41 +367,44 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
 #------------------------
   #plot coefficients
   
-  keep= c("Mom","ID","f.ind","expt","RGR11s_scale","RGR17s_scale","RGR23s_scale","RGR29s_scale","RGR35s_scale", "surv_norm","puptime_norm","pupal_massmg_norm","FecEggCount_norm")
+  keep= c("Mom","ID","f.ind","expt","RGR11s_scale","RGR17s_scale","RGR23s_scale","RGR29s_scale","RGR35s_scale", "surv_norm","puptime_norm","Pupa.wt_norm","Fecundity_norm")
   
   #to long format
-  tpc.gl.h2 <- melt(tpc.sel1[,colnames(tpc.sel1) %in% keep], id.vars = c("Mom", "ID", "f.ind", "expt","surv_norm","puptime_norm","pupal_massmg_norm","FecEggCount_norm"), variable.name = "temp")
+  tpc.gl.h2 <- melt(tpc.sel1[,colnames(tpc.sel1) %in% keep], id.vars = c("Mom", "ID", "f.ind", "expt","surv_norm","puptime_norm","Pupa.wt_norm","Fecundity_norm"), variable.name = "temp")
   tpc.gl.h2$temp= gsub("RGR","",tpc.gl.h2$temp)
   tpc.gl.h2$temp= as.numeric(gsub("s_scale","",tpc.gl.h2$temp))
   
-  plot.pm.b<- ggplot(tpc.gl.h2, aes(x=value,y=pupal_massmg_norm)) + 
+  plot.pm.b<- ggplot(tpc.gl.h2, aes(x=value,y=Pupa.wt_norm)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
     ylab("Pupal mass (mg)") +xlab("RGR (g/g/h)")+
     theme_bw()
   #FIX
-#-------
+#==============================================
   # Plot trait changes
   
-  #mass
-  plot.mass<- ggplot(tpc.sel, aes(x=pupal_massmg,color=expt, group=expt)) + 
+  tpc.tc<- tpc[,c("f.ind", "expt","Mi","Pupa.wt","Butt..Wt","Time.to.Pupation","Time.to.Eclosion","Fecundity")]
+  
+  #to long format
+  tpc.tcl<- melt(tpc.tc, id.vars = c("f.ind", "expt"), variable.name = "trait")
+  
+  #plot
+  plot.tc<- ggplot(tpc.tcl, aes(x=value,color=expt, group=expt)) + 
     geom_density(aes(fill=expt), alpha=0.5)+
-    ylab("Density") +xlab("pupal mass (mg)")+
+    facet_wrap(.~trait, scales="free")+
+    ylab("Density") +theme_bw()+
     scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)
   
-  #pupal time
-  plot.pt<- ggplot(tpc.sel, aes(x=puptime,color=expt, group=expt)) + 
-    geom_density(aes(fill=expt), alpha=0.5)+
-    ylab("Density") +xlab("pupal mass (mg)")+
-    scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)
-  
+  pdf("Prapae_TraitChange.pdf",height = 6, width = 10)
+  plot.tc
+  dev.off()
   #-------
   # Plot correlations
   
-  plot.cor1<- ggplot(tpc.gl.all, aes(x=pupal_massmg,y=puptime, color=expt)) + 
+  plot.cor1<- ggplot(tpc.l, aes(x=Pupa.wt,y=Time.to.Pupation, color=expt)) + 
     geom_point()+geom_smooth(method="lm")
   
-  plot.cor2<- ggplot(tpc.gl.all, aes(x=pupal_massmg,y=FecEggCount, color=expt)) + 
+  plot.cor2<- ggplot(tpc.l, aes(x=Pupa.wt,y=Fecundity, color=expt)) + 
     geom_point()+geom_smooth(method="lm")
   
   pdf("Prapae_correlations.pdf",height = 6, width = 10)
@@ -608,61 +414,68 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #-----------------------------
   #Variance covariance analysis
   
+  # Load libraries
   library(MCMCglmm)
-  
-  df<- tpc.sel[which(tpc.sel$period=="past"),-which(colnames(tpc.sel)%in% c("FecEggCount"))]
+ 
+  df<- tpc[which(tpc$period=="past"),c("Mom","RGR23","RGR29","RGR11","RGR17","RGR35")]
   df<- na.omit(df)
-  names(df)[c(1)]<- c("mother")
   #make new id
-  df$id<- 1: nrow(df)
+  df$animal<- 32: (32+nrow(df)-1)
   
-  # Define priors for multivariate model (5 traits)
-  ntrait <- 5
-  prior_multivar <- list(
-    R = list(V = diag(ntrait), nu = 0.002),
-    G = list(G1 = list(V = diag(ntrait)*0.02, nu = ntrait),  # Animal effect
-             G2 = list(V = diag(ntrait)*0.02, nu = ntrait))  # Maternal effect
-  )
+  #https://devillemereuil.legtux.org/wp-content/uploads/2021/09/tuto_en.pdf
+  #make pedigree
+  ped<- rbind(cbind(unique(df$Mom),NA,NA),cbind(df$animal,df$Mom,NA))
+  colnames(ped)<- c("animal","mother","father")
   
-  # Fit multivariate animal model
+  # Set priors for multivariate analysis
+  #prior= list(R = list(V = diag(5) * 0.002 / 1.002, nu = 1.002),
+  #     G = list(G1 = list(V = diag(5) * 0.002 / 1.002, nu = 1.002)))
+  
+  #gentler prior
+  prior <- list(R = list(V = diag(5), nu = 5),
+                 G = list(G1 = list(V = diag(5), nu = 5)))
+  
+  #variances
+  var(df$RGR11)
+  var(df$RGR35)
+  
+  # Fit the model
   model <- MCMCglmm(
-    fixed = cbind(RGR11, RGR17, RGR23, RGR29, RGR35) ~ 1,
-    random = ~ us(trait):id + us(trait):mother,
-    rcov = ~ us(trait):units,
-    family = rep("gaussian", 5),
-    #pedigree = pedigree,
+    cbind(RGR11,RGR17,RGR23,RGR29,RGR35) ~ trait - 1,  
+    # Can add period in as fixed effect to evaluate change over time? 
+    # structure of the variance-covariance matrix for the random effects (random) or the residual variances (rcov)
+    random = ~ us(trait):animal, #models unstructured genetic covariance (G-matrix)
+    rcov = ~ us(trait):units, #models unstructured residual covariance (R-matrix)
+    family = rep("gaussian", 5), 
+    prior = prior,
+    pedigree = ped,
     data = df,
-    prior = prior_multivar,
-    nitt = 60000,
+    nitt = 100000,
     burnin = 10000,
-    thin = 25,
-    verbose = FALSE
-  )
+    thin = 10)
+    
+  # Print the model summary
+  summary(model)
   
-  # Extract posterior means for G and P matrices
-  G_matrix <- apply(model$VCV[, grep("id", colnames(model$VCV))], 2, mean)
-  dim(G_matrix) <- c(ntrait, ntrait)
+  #diagnostics
+  plot(model[["Sol"]])
+  plot(model[["VCV"]])
   
-  P_matrix <- apply(model$VCV[, grep("units", colnames(model$VCV))], 2, mean) + 
-    apply(model$VCV[, grep("mother", colnames(model$VCV))], 2, mean) + 
-    G_matrix
-  dim(P_matrix) <- c(ntrait, ntrait)
+  #model$VCV: Posterior samples of variance components (columns 1-25 = G, 26-50 = R)
+  # Extract genetic covariance matrix (G)
+  g.mat.hb <- matrix(apply(model$VCV[,1:25], 2, median), 5, 5)
+  colnames(g.mat.hb) <- rownames(g.mat.hb) <- c("RGR11","RGR17","RGR23","RGR29","RGR35")
   
-  #G and P matrices
-  g.mat.bh <- melt(G_matrix)
-  p.mat.bh <- melt(P_matrix)
-  
-  gts<- c("RGR11","RGR17","RGR23","RGR29","RGR35")
-  g.mat.bh$Var1<- gts[g.mat.bh$Var1]
-  g.mat.bh$Var2<- gts[g.mat.bh$Var2]
-  p.mat.bh$Var1<- gts[p.mat.bh$Var1]
-  p.mat.bh$Var2<- gts[p.mat.bh$Var2]
+  # Extract phenotypic covariance matrix (P)
+  #Calculated as P= G + R 
+  p.mat.hb <- g.mat.hb + matrix(apply(model$VCV[,26:50], 2, median), 5, 5)
+  colnames(p.mat.hb) <- rownames(p.mat.hb) <- c("RGR11","RGR17","RGR23","RGR29","RGR35")
   
   #But: a quick and dirty method is probably sufficient for now:  compute mean values for each family at each temperature, and then use the var function is compute the var-covariance matrix on the family means.  This is the least-squares estimate of the broad sense G matrix.  Using var on the individual values gives the comparable estimate of the P (phenotypic) matrix.  These should give a good approximation to the REML estimates (which are constrained so that you don’t get variances< 0 ).
   
-  #CURRENT
+  #RECENT
   #family means
-  tpc.f <- tpc %>% 
+  tpc.f <- tpc[tpc$period=="recent",] %>% 
     group_by(Mom) %>% 
     dplyr::summarise(RGR11 = mean(RGR11, na.rm=T),
                      RGR17 = mean(RGR17, na.rm=T),
@@ -718,12 +531,6 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
   #write out matrices
   write.csv(rbind(g.mat,p.mat,g.mat.h,p.mat.h), "matrices.csv" )
   write.csv(var.all, "matriceslong.csv" )
-  
-  #write out data 
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/out/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/out/")
-  
-  write.csv(tpc.sel, "garden_tpcs.csv")
   
     #----------------
   ### Variance Covariance plot
