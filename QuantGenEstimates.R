@@ -4,65 +4,6 @@
 #example: https://www.journals.uchicago.edu/doi/full/10.1086/730261
 
 #-----------------------
-#install.packages("pedigree")
-library(MCMCglmm)
-
-#library(pedigree)
-#library(devtools)
-#install_github("cran/MasterBayes")
-#library(MasterBayes)
-
-df<- tpc.sel[which(tpc.sel$period=="past"),-which(colnames(tpc.sel)%in% c("FecEggCount"))]
-df<- na.omit(df)
-names(df)[c(1)]<- c("mother")
-#make new id
-df$id<- 1: nrow(df)
-
-#pedigree not working
-#make pedigree matrix
-pedigree<- df[,c("id", "mother")]
-pedigree$father<- "NA"
-
-# Manual pedigree completion
-all_parents <- unique(c(pedigree$mother, pedigree$father))
-missing_ids <- setdiff(all_parents, pedigree$id)
-pedigree <- rbind(pedigree, 
-                       data.frame(id=missing_ids, mother=NA, father=NA))
-
-#------
-# Define priors for multivariate model (5 traits)
-ntrait <- 5
-prior_multivar <- list(
-  R = list(V = diag(ntrait), nu = 0.002),
-  G = list(G1 = list(V = diag(ntrait)*0.02, nu = ntrait),  # Animal effect
-           G2 = list(V = diag(ntrait)*0.02, nu = ntrait))  # Maternal effect
-)
-
-# Fit multivariate animal model
-model <- MCMCglmm(
-  fixed = cbind(RGR11, RGR17, RGR23, RGR29, RGR35) ~ 1,
-  random = ~ us(trait):id + us(trait):mother,
-  rcov = ~ us(trait):units,
-  family = rep("gaussian", 5),
-  #pedigree = pedigree,
-  data = df,
-  prior = prior_multivar,
-  nitt = 60000,
-  burnin = 10000,
-  thin = 25,
-  verbose = FALSE
-)
-
-# Extract posterior means for G and P matrices
-G_matrix <- apply(model$VCV[, grep("id", colnames(model$VCV))], 2, mean)
-dim(G_matrix) <- c(ntrait, ntrait)
-
-P_matrix <- apply(model$VCV[, grep("units", colnames(model$VCV))], 2, mean) + 
-  apply(model$VCV[, grep("mother", colnames(model$VCV))], 2, mean) + 
-  G_matrix
-dim(P_matrix) <- c(ntrait, ntrait)
-
-#----
 #https://rdrr.io/cran/evolqg/man/RandomSkewers.html
 # Compare G and P matrices using Random Skewers
 matrix_similarity <- RandomSkewers(G_matrix, P_matrix)

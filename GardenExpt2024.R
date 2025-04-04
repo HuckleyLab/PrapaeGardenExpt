@@ -8,13 +8,12 @@ library(nlme)
 library(lme4)
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
-
-if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
-if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
+#desktop<- "y"
+#if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
+#if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 
 #load data
-tpc<- read.csv("PrapaeGardenExpt_WARP.csv")
+tpc<- read.csv("./data/PrapaeGardenExpt_WARP.csv")
 #drop unneeded columns
 tpc<- tpc[,-which(colnames(tpc) %in% c("X", "Species", "Population", "Study.Site"))]
 
@@ -417,10 +416,15 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   # Load libraries
   library(MCMCglmm)
  
-  df<- tpc[which(tpc$period=="past"),c("Mom","RGR23","RGR29","RGR11","RGR17","RGR35")]
+  #loop through past and recent
+  for(k in 1:2){
+    
+  if(k==1) df<- tpc[which(tpc$period=="past"),c("Mom","RGR23","RGR29","RGR11","RGR17","RGR35")]
+  if(k==2) df<- tpc[which(tpc$period=="recent"),c("Mom","RGR23","RGR29","RGR11","RGR17","RGR35")]
+    
   df<- na.omit(df)
   #make new id
-  df$animal<- 32: (32+nrow(df)-1)
+  df$animal<- (max(df$Mom)+1):((max(df$Mom)+1)+nrow(df)-1)
   
   #https://devillemereuil.legtux.org/wp-content/uploads/2021/09/tuto_en.pdf
   #make pedigree
@@ -454,6 +458,11 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     burnin = 10000,
     thin = 10)
     
+  if(k==1) model.p= model
+  if(k==2) model.r= model
+    
+  } #end loop past recent loop
+  
   # Print the model summary
   summary(model)
   
@@ -463,13 +472,19 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   #model$VCV: Posterior samples of variance components (columns 1-25 = G, 26-50 = R)
   # Extract genetic covariance matrix (G)
-  g.mat.hb <- matrix(apply(model$VCV[,1:25], 2, median), 5, 5)
+  g.mat.hb <- matrix(apply(model.p$VCV[,1:25], 2, median), 5, 5)
   colnames(g.mat.hb) <- rownames(g.mat.hb) <- c("RGR11","RGR17","RGR23","RGR29","RGR35")
   
   # Extract phenotypic covariance matrix (P)
   #Calculated as P= G + R 
-  p.mat.hb <- g.mat.hb + matrix(apply(model$VCV[,26:50], 2, median), 5, 5)
+  p.mat.hb <- g.mat.hb + matrix(apply(model.p$VCV[,26:50], 2, median), 5, 5)
   colnames(p.mat.hb) <- rownames(p.mat.hb) <- c("RGR11","RGR17","RGR23","RGR29","RGR35")
+  
+  #recent
+  g.mat.b <- matrix(apply(model.r$VCV[,1:25], 2, median), 5, 5)
+  colnames(g.mat.b) <- rownames(g.mat.b) <- c("RGR11","RGR17","RGR23","RGR29","RGR35")
+  p.mat.b <- g.mat.b + matrix(apply(model.r$VCV[,26:50], 2, median), 5, 5)
+  colnames(p.mat.b) <- rownames(p.mat.b) <- c("RGR11","RGR17","RGR23","RGR29","RGR35")
   
   #But: a quick and dirty method is probably sufficient for now:  compute mean values for each family at each temperature, and then use the var function is compute the var-covariance matrix on the family means.  This is the least-squares estimate of the broad sense G matrix.  Using var on the individual values gives the comparable estimate of the P (phenotypic) matrix.  These should give a good approximation to the REML estimates (which are constrained so that you don’t get variances< 0 ).
   
@@ -524,7 +539,19 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   g.mat.m.h$type<- "G"; g.mat.m.h$time<- "past"
   p.mat.m.h$type<- "P"; p.mat.m.h$time<- "past"
   
-  var.all<- rbind(g.mat.m, p.mat.m, g.mat.m.h, p.mat.m.h)
+  #add Bayesian matrices
+  g.mat.m.b <- melt(g.mat.b)
+  p.mat.m.b <- melt(p.mat.b)
+  g.mat.m.hb <- melt(g.mat.hb)
+  p.mat.m.hb <- melt(p.mat.hb)
+  
+  g.mat.m.b$type<- "G bayes"; g.mat.m.b$time<- "recent"
+  p.mat.m.b$type<- "P bayes"; p.mat.m.b$time<- "recent"
+  g.mat.m.hb$type<- "G bayes"; g.mat.m.hb$time<- "past"
+  p.mat.m.hb$type<- "P bayes"; p.mat.m.hb$time<- "past"
+  
+  var.all<- rbind(g.mat.m, p.mat.m, g.mat.m.h, p.mat.m.h,
+                  g.mat.m.b, p.mat.m.b, g.mat.m.hb, p.mat.m.hb)
   var.all$Var1 <- sub("rgr_", "RGR", var.all$Var1)
   var.all$Var2 <- sub("rgr_", "RGR", var.all$Var2)
 
@@ -537,7 +564,13 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   # Current variances are larger now than in the past for both G and P, particularly at 35C
   # Stronger covariances now between performance at 29 and 35: indicative of tradeoff
   
-  plot.var= ggplot(data = var.all, aes(x=Var1, y=Var2, fill=value)) + 
+  plot.var= ggplot(data = var.all[which(var.all$type %in% c("G","P") ),], aes(x=Var1, y=Var2, fill=value)) + 
+    geom_tile()+
+    facet_grid(type~time)+
+    scale_fill_gradient2(low ="orange", high = "blue", space = "Lab")
+  
+  #Bayesian
+  plot.var.b= ggplot(data = var.all[which(var.all$type %in% c("G bayes","P bayes") ),], aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile()+
     facet_grid(type~time)+
     scale_fill_gradient2(low ="orange", high = "blue", space = "Lab")
@@ -549,20 +582,6 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   pdf("PrapaeTPC_cov.pdf",height = 10, width = 10)
   plot.var
   dev.off()
-  
-  #-----------------
-  #compare Bayesian fit
-  g.mat.bh$type<- "G"; g.mat.bh$time<- "past b"
-  p.mat.bh$type<- "P"; p.mat.bh$time<- "past b"
-  
-  var.b<- rbind(g.mat.bh, p.mat.bh)
-  var.b$Var1 <- sub("rgr_", "RGR", var.b$Var1)
-  var.b$Var2 <- sub("rgr_", "RGR", var.b$Var2)
-  
-  plot.varb= ggplot(data = var.b, aes(x=Var1, y=Var2, fill=value)) + 
-    geom_tile()+
-    facet_grid(type~.)+
-    scale_fill_gradient2(low ="orange", high = "blue", space = "Lab")
   
   #----------
   #Correlation plot

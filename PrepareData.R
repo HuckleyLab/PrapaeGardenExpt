@@ -8,9 +8,11 @@ library(nlme)
 library(lme4)
 library(stringr)
 
+home<- getwd()
+
 #GARDEN DATA
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -196,7 +198,8 @@ tpc.h$period<- "past"
 tpc<- rbind(tpc, tpc.h)
 
 #write out
-write.csv(tpc, "PrapaeGardenExpt_WARP.csv")
+setwd(home)
+write.csv(tpc, "data/PrapaeGardenExpt_WARP.csv")
 
 #================================================
 #TEMPERATURE DATA
@@ -281,9 +284,10 @@ t2023.l$Year<- 2023
 tdat<- rbind(t1997.l, t1999.l, t1999e.l, t2024.l, t2023.l)
 
 #write out
-if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
-if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
+#if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
+#if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 
-write.csv(tdat, "PrapaeGardenTemps_WARP.csv")
+setwd(home)
+write.csv(tdat, "data/PrapaeGardenTemps_WARP.csv")
 
 

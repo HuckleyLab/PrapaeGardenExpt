@@ -13,14 +13,13 @@ library(lubridate)
 library(tidyr)
 library(readxl)
 
-#toggle between desktop (y) and laptop (n)
-desktop<- "n"
+##toggle between desktop (y) and laptop (n)
+#desktop<- "n"
+##load data
+#if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
+#if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 
-#load data
-if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
-if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
-
-tdat<- read.csv(tdat, "PrapaeGardenTemps_WARP.csv")
+tdat<- read.csv("./data/PrapaeGardenTemps_WARP.csv")
 #----------------
 #Plot time series
 ggplot(tdat, aes(x=dt,y=value, color=T)) + 
