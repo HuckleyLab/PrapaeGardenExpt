@@ -195,3 +195,63 @@ model <- mmer(
 # #  https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/j.1365-2656.2009.01639.x
 
 CalculateMatrix
+
+#==========
+#DMM
+install.packages("dmm")
+library(dmm)
+library(nadiv)
+
+  df$SId<-NA
+  df<- df[,c("animal","Mom","SId","RGR23","RGR29","RGR11","RGR17","RGR35")]
+  names(df[,c(1:2)])<-c("ID","DId")
+  
+ #?? df.mdf<- mdf(df,pedcols=c(1:3),factorcols=c(4:8), sexcode=c("M","F"))
+  
+  # Create the relationship matrix
+  #colnames(ped)<-c("Id","DId","SId")
+  colnames(ped)<-c("id","dam","sire")
+  A <- makeA(ped)
+  
+  # Create a matrix of the trait values
+  df$Ymat <- as.matrix(df[, c("RGR23","RGR29","RGR11","RGR17","RGR35")])
+  
+  # Ensure Id and DId are properly formatted
+  df$Id <- as.factor(df$animal)
+  df$DId <- as.factor(df$Mom)
+  
+  # Run the dmm analysis with REML, incorporating the relationship matrix
+  dmm_result <- dmm(
+    mdf = df,
+    fixform = Ymat ~ 1,
+    components = c("VarE(I)", "VarG(Ia)"),
+    dmeopt = "reml",
+    ginverse = list(Ia = A),  
+    posdef = TRUE
+  )
+  
+  # Save the results
+  save(dmm_result, file = "dmm_analysis_results.RData")
+  
+  # Display summary of results
+  summary(dmm_result)
+  
+  # Extract genetic parameters (heritabilities and correlations)
+  genetic_params <- gsummary(dmm_result)
+  print(genetic_params)
+  
+  # Extract the G matrix (additive genetic variance-covariance matrix)
+  G_matrix <- dmm_result$siga[["VarG(Ia)"]]
+  print("G matrix (Additive genetic variance-covariance):")
+  print(G_matrix)
+  
+  # Extract the P matrix (phenotypic variance-covariance matrix)
+  P_matrix <- dmm_result$siga[["VarP(I)"]]
+  print("P matrix (Phenotypic variance-covariance):")
+  print(P_matrix)
+  
+  # Calculate standard errors
+  variance_components_with_se <- csummary(dmm_result)
+  print(variance_components_with_se)
+
+
