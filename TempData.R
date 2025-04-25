@@ -13,13 +13,17 @@ library(lubridate)
 library(tidyr)
 library(readxl)
 
-##toggle between desktop (y) and laptop (n)
-#desktop<- "n"
-##load data
-#if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
-#if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
+cols<- viridis_pal(option = "mako")(8)
+cols<- cols[c(2,4,7)]
+cols2<- colm[c(2,6)]
+
+#toggle between desktop (y) and laptop (n)
+desktop<- "n"
+if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
+if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
 tdat<- read.csv("./data/PrapaeGardenTemps_WARP.csv")
+
 #----------------
 #Plot time series
 ggplot(tdat, aes(x=dt,y=value, color=T)) + 
@@ -38,7 +42,7 @@ tdat.mean <- tdat %>%
 Tdist.plot <- ggplot(tdat.mean[which(tdat.mean$dt>223 & tdat.mean$dt<238),], aes(x=Tmean, color=factor(Year), fill=factor(Year), group=factor(Year))) +  geom_density(alpha=0.5)+
   scale_fill_viridis_d() +scale_color_viridis_d()+
   theme_classic(base_size = 18)+
-  labs(x = "T mean (°C)", color = "Year", fill="Year") 
+  labs(x = "Temperature (°C)", color = "Year", fill="Year") 
 
 #restrict to daylight 223 238 Aug 11-26; Aug 11: 6,8:30; Aug 26: 6:20-8
 #tdat.mean$dec.dt<- tdat.mean$dt - floor(tdat.mean$dt)
@@ -48,7 +52,7 @@ Tdist.plot <- ggplot(tdat.mean[which(tdat.mean$dt>223 & tdat.mean$dt<238),], aes
 Tdist.day.plot <- ggplot(tdat.mean, aes(x=Tmean, color=factor(Year), fill=factor(Year), group=factor(Year))) +  geom_density(alpha=0.5)+
   scale_fill_viridis_d() +scale_color_viridis_d()+
   theme_classic(base_size = 18)+ xlim(0,40)+
-  labs(title="doy 223-238, daytime" , x = "T mean (°C)", color = "Year", fill="Year") 
+  labs(title="doy 223-238, daytime" , x = "Temperature (°C)", color = "Year", fill="Year") 
 
 #hourly max, min
 tdat.mean.hr <- tdat %>%
@@ -91,9 +95,10 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
 #tdat.day<- tdat.mean[which(tdat.mean$dec.dt>0.25 & tdat.mean$dec.dt<0.85),]
 
 Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean, color=factor(study), fill=factor(study), group=factor(study))) +  geom_density(alpha=0.5)+
-  scale_fill_viridis_d() +scale_color_viridis_d()+
-  theme_classic(base_size = 18)+ xlim(0,40)+
-  labs(x = "T mean (°C)", color = "Study", fill="Study") 
+  scale_fill_manual(values=cols) +scale_color_manual(values=cols)+
+  #scale_fill_viridis_d(option = "G") +scale_color_viridis_d(option = "G")+
+  theme_classic(base_size = 18)+ xlim(0,42)+
+  labs(x = "Temperature (°C)", color = "Study", fill="Study", y="Density of temperatures") +theme(legend.position = c(0.8, 0.8))
 
   #==================
 
@@ -107,9 +112,9 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
 #Tplot<- tdat.mean[which(tdat.mean$dt>209 & tdat.mean$dt<217 & tdat.mean$Year %in% c(1999,2024)),]
   
   Tdist.plot <- ggplot(Tplot, aes(x=Tmean, color=factor(Year), fill=factor(Year), group=factor(Year))) +  geom_density(alpha=0.5)+
-    scale_fill_viridis_d() +scale_color_viridis_d()+
+    scale_fill_manual(values=cols2) +scale_color_manual(values=cols2)+
     theme_classic(base_size = 18)+
-    labs(x = "T mean (°C)", color = "Year", fill="Year") 
+    labs(x = "Temperature (°C)", color = "Year", fill="Year") 
   
   #load and plot short term growth rate
   #run TPCfits to get data
@@ -130,12 +135,9 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   sg= as.data.frame(cbind(temps, pm.sg))
   sg$Year=1999
   #add y values from GardenExpt2024.R code
-  tpc.agg.h <- tpc.lh %>% 
-    group_by(temp) %>% 
-    dplyr::summarise(mean = mean(value, na.rm = TRUE),
-                     se = sd(value, na.rm = TRUE)/length(value) )
+  tpc.agg.h<- as.data.frame(tpc.agg[tpc.agg$period=="past",])
   tpc.agg.h$Year<- 1999
-  tpc.agg.h<- as.data.frame(tpc.agg.h)
+  
   #past tpc data
   inds<- match(sg$temps, tpc.agg.h$temp)
   sg$ys<- tpc.agg.h$mean[inds]
@@ -152,11 +154,12 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
     #add selection arrows
     geom_segment(data=sg, aes(x = temps, y = ys, xend = temps, yend = ys+pm.sg/20),
                  arrow = arrow(length = unit(0.5, "cm")), lwd=1.2)+
+    xlim(0,42)+ theme(legend.position = c(0.8, 0.8))+
   #add additional axis
   scale_y_continuous(
     name = "Growth rate (g/g/h)", 
     sec.axis = sec_axis(~.x * 1, 
-                        name = "Density of environmental data"))
+                        name = "Density of temperatures"))
   
   #==================
   #Estimate growth rate over temperatures
@@ -193,12 +196,14 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   ZT= rbind(ZT, ZTp)
   
   #----
-  TZdist.plot <- ggplot(Tplot, aes(x=Tmean, color=factor(Year))) +  geom_density(alpha=0.5)+
-    scale_fill_viridis_d() +scale_color_viridis_d()+
+  TZdist.plot <- ggplot(Tplot, aes(x=Tmean, color=factor(Year), fill=factor(Year))) +  geom_density(alpha=0.5)+
+    scale_fill_manual(values=cols2) +scale_color_manual(values=cols2)+
     theme_classic(base_size = 18)+
-    labs(x = "T mean (°C)") +
+    labs(x = "Temperature (°C)") +
       #add growth rate distribution
-      geom_line(data=ZT, aes(x=temp, y=z), lty="dashed")
+      geom_line(data=ZT, aes(x=temp, y=z), lty="dashed", linewidth=0.75)+
+    xlim(0,42)+
+    ylab("Growth and T densities")+theme(legend.position = "none")
   #solid is f(T); dashed is Z(T)
   
   #==================
@@ -211,11 +216,12 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/GHCNdata/")
   if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/GHCNdata/")
   
-  t.dat<- read.csv("USW00094290.csv")
+  t.dat<- read.csv("USW00094290_2025.csv")
   t.dat$site="Seattle"
   
-  t.dat$tmin= t.dat$TMIN/10 #divide by ten
-  t.dat$tmax= t.dat$TMAX/10
+  t.dat$tmin= t.dat$TMIN /10 #divide by ten
+  t.dat$tmax= t.dat$TMAX /10
+  
   t.dat$month= round(month(as.POSIXlt(t.dat$DATE)))
   t.dat$year= year(as.POSIXlt(t.dat$DATE))
   #restrict to growing season
@@ -228,11 +234,11 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   t.dat$season[which(t.dat$month %in% c(7:8))] ="summer"
   
   #restrict years
-  t.dat= t.dat[which(t.dat$year %in% c(1987:2021)),]
-  t.dat1= t.dat[which(t.dat$year %in% c(1991:1994)),]
+  t.dat= t.dat[which(t.dat$year %in% c(1994:2024)),]
+  t.dat1= t.dat[which(t.dat$year %in% c(1990:1999)),]
   #or 87-92, 1990:1994
   t.dat1$period="initial"
-  t.dat2= t.dat[which(t.dat$year %in% c(2016,2018,2019,2020)),]
+  t.dat2= t.dat[which(t.dat$year %in% c(2015:2024)),]
   t.dat2$period="recent"
   #combine
   t.dat= rbind(t.dat1,t.dat2)
@@ -253,27 +259,22 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   
   #to long format
   temps1<- melt(temps, id.vars=c("period","site","month"))
-  #make labels
-  temps1$time<- NA
-  temps1$time[which(temps1$period=="initial" & temps1$month==6)]<- "June 1991-1994"
-  temps1$time[which(temps1$period=="initial" & temps1$month==7)]<- "July 1991-1994"
-  temps1$time[which(temps1$period=="initial" & temps1$month==8)]<- "August 1991-1994"
-  
-  temps1$time[which(temps1$period=="recent" & temps1$month==6)]<- "June 2016-2020"
-  temps1$time[which(temps1$period=="recent" & temps1$month==7)]<- "July 2016-2020"
-  temps1$time[which(temps1$period=="initial" & temps1$month==8)]<- "August 2016-2020"
-  
+ 
   #density plot
-  month.plot<- ggplot(temps1, aes(x=value, y=month, color=factor(month), fill=factor(month), lty=period, group=time))+
-    geom_density_ridges(lwd=1.2)+scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)+
-    xlim(5,40)+ylim(5.9, 9.5)+
-    xlab("Temperature (°C)")+ guides(fill="none", color="none")+
-    theme_bw(base_size = 18)+theme(legend.position = c(0.9, 0.8))
+   month.plot<- ggplot(temps1, aes(x=value, y=month, color=factor(month), fill=factor(month), lty=period))+
+    geom_density_ridges(lwd=1.2, alpha=0.5)+
+    scale_color_manual(values=rev(cols))+scale_fill_manual(values=rev(cols))+
+    xlim(0,42)+
+    ylim(5.9, 9.5)+
+    xlab("Temperature (°C)") +ylab("Month")+ 
+    guides(fill="none", color="none")+ labs(lty="Period")+
+    theme_classic(base_size = 18)+theme(legend.position = c(0.9, 0.8))
   
   #min, max distributions
   ggplot(t.dat, aes(x=tmin, color=period, fill=period))+
     facet_wrap(~month)+
-    geom_density()+scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)+
+    geom_density(alpha=0.5)+
+    scale_color_manual(values=cols)+scale_fill_manual(values=cols)+
     xlim(-20,30)+
     xlab("Temperature (°C)")+
     theme_bw(base_size = 18)
@@ -296,5 +297,4 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   pdf("Fig_Tdist.pdf",height = 8, width = 12)
   plot.sel + TZdist.plot + Tdist.exp.plot + month.plot +plot_layout(design=design) 
   dev.off()
- 
   #=============================

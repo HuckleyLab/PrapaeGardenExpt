@@ -8,8 +8,12 @@ library(nlme)
 library(lme4)
 library(car)
 
+colm<- viridis_pal(option = "mako")(8)
+cols<- colm[c(2,4,7)]
+cols2<- colm[c(2,6)]
+
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -17,7 +21,6 @@ if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projec
 tpc<- read.csv("./data/PrapaeGardenExpt_WARP.csv")
 #drop unneeded columns
 tpc<- tpc[,-which(colnames(tpc) %in% c("X", "Species", "Population", "Study.Site"))]
-
 
 #update experiment labels
 expts<- c("june","july","aug")
@@ -54,11 +57,11 @@ tpc.ragg.f<- tpc.agg.f[which(tpc.agg.f$period=="recent"),]
 tpc.plot= ggplot(tpc.rl, aes(x=temp,y=value)) + 
   geom_point()+
 #add family lines
-  geom_line(data=tpc.ragg.f, aes(x=temp, y = mean, group=Mom), linewidth=1, col="darkorange")+
+  geom_line(data=tpc.ragg.f, aes(x=temp, y = mean, group=Mom), linewidth=1, col=colm[6])+
 #add points for temperature means  
   geom_errorbar(data=tpc.ragg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
-  geom_point(data=tpc.ragg, aes(x=temp, y = mean), size=4, col="black", fill="darkgoldenrod1", pch=21)+
-  theme_bw()+xlab("Temperature (C)")+ylab("RGR (g/g/h)")+
+  geom_point(data=tpc.ragg, aes(x=temp, y = mean), size=4, col="black", fill=colm[7], pch=21)+
+  theme_classic(base_size=16)+xlab("Temperature (°C)")+ylab("")+
   ggtitle("2024")+ylim(-0.02,0.06)
 
 #------------
@@ -71,30 +74,30 @@ tpc.pagg.f<- tpc.agg.f[which(tpc.agg.f$period=="past"),]
 tpc.plot.p= ggplot(tpc.pl, aes(x=temp,y=value)) + 
   geom_point()+
   #add family lines
-  geom_line(data=tpc.pagg.f, aes(x=temp, y = mean, group=Mom), linewidth=1, col="blue1")+
+  geom_line(data=tpc.pagg.f, aes(x=temp, y = mean, group=Mom), linewidth=1, col=colm[2])+
   #add points for temperature means  
   geom_errorbar(data=tpc.pagg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
   geom_point(data=tpc.pagg, aes(x=temp, y = mean), size=4, col="black", fill="cornflowerblue", pch=21)+
-  theme_bw()+xlab("Temperature (C)")+ylab("RGR (g/g/h)")+
-  ggtitle("2024")+ylim(-0.02,0.06)
+  theme_classic(base_size=16)+xlab("")+ylab("Growth rate (g/g/h)")+
+  ggtitle("1999")+ylim(-0.02,0.06)
 
 #------------
 #plot TPCs over each other
 tpc.agg.f$MomPer<- paste(tpc.agg.f$Mom, tpc.agg.f$period, sep="_")
 
 tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
-  geom_line(aes(group=MomPer)) +scale_color_manual(values=c("blue1", "darkorange"))+
+  geom_line(aes(group=MomPer),linewidth=1, alpha=0.6) +scale_color_manual(values=cols2)+
   #add means
  geom_errorbar(data=tpc.agg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se, col=factor(period)), width=0)+
     geom_point(data=tpc.agg, color="black", aes(x=temp, y = mean, fill=factor(period)), size=3, pch=21)+
-    theme_bw()+xlab("Temperature (C)")+ylab("RGR (g/g/h)")+
-    labs(color="Year")+ scale_fill_manual(values=c("cornflowerblue", "darkgoldenrod1"))+
-    ggtitle("1999 & 2024") +ylim(-0.02,0.06) + guides(fill = FALSE)
+    theme_classic(base_size=16)+xlab("")+ylab("")+
+    labs(color="Year")+ scale_fill_manual(values=c("cornflowerblue",colm[7]))+
+    ggtitle("1999 & 2024") +ylim(-0.02,0.06) + guides(fill = FALSE, color=FALSE)
   
 #------------
 #save figure
   
-  pdf("./figures/Fig2_PrapaeTPC_2024.pdf",height = 6, width = 15)
+  pdf("./figures/Fig2_PrapaeTPC_2024.pdf",height = 6, width = 12)
   tpc.plot.p + tpc.plot +tpc.plot.all
   dev.off()
   
@@ -202,7 +205,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   expts<- expts.lab
   periods<- c("recent","recent","past")
   rgrs<- c("RGR11","RGR17","RGR23","RGR29","RGR35")
-  fitcomp<- c("mass","surv","devrate", "fec")
+  fitcomp<- c("mass","surv","devtime", "fec")
   
   sg= expand.grid(rgrs, expts.lab, fitcomp)
   sg= as.data.frame(cbind( sg,matrix(NA, nrow=nrow(sg), ncol=4)))
@@ -231,7 +234,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     selmod.d <- lm(devrate_norm~RGR11_ms+RGR17_ms+RGR23_ms+RGR29_ms+RGR35_ms, data=seln) 
     anova(selmod.d)
     coef.devrate<- summary(selmod.d)$coefficients
-    sg[which(sg$expt==expts[k] & sg$fitcomp=="devrate"),c(4:7)]= coef.devrate[2:nrow(coef.devrate), ]
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="devtime"),c(4:7)]= coef.devrate[2:nrow(coef.devrate), ]
     
     #fecundity
     seln.f<- seln[which(!is.na(seln$Fecundity_norm)),]
@@ -255,53 +258,61 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   sg$expt <- expts.lab[match(sg$expt,expts)]
   sg$expt <- factor(sg$expt, levels= c("Aug 1999","June 2024","July 2024"), ordered=TRUE)
   
+  sg$temp<- as.numeric(sg$temp)
+  
+  #labels
+  fitcomp.lab<- c("Pupal mass (mg)","Survival (%)","Development time (days)", "Fecundity")
+  sg$fitcomp.lab<- fitcomp.lab[match(sg$fitcomp, fitcomp)]
+  #order
+  sg$fitcomp.lab<- factor(sg$fitcomp.lab, levels=c("Pupal mass (mg)","Survival (%)","Development time (days)", "Fecundity"), ordered=TRUE)
+  
   #Genetica plot #SWITCH FACETS
-  plot.sg<- ggplot(sg[which(sg$fitcomp %in% c("mass", "surv", "devrate")),], aes(x=temp, y=value, color=expt, fill=sig, group=expt)) + 
+  plot.sg<- ggplot(sg[which(sg$fitcomp %in% c("mass", "surv", "devtime")),], aes(x=temp, y=value, color=expt, fill=sig, group=expt)) + 
     geom_point(size=4, pch=21)+ geom_smooth(se=FALSE)+
-    facet_wrap(.~fitcomp)+
-    ylab("Selection gradient") +xlab("Temperature (C)")+
-    scale_color_viridis_d()+
-    #ylim(-0.12, 0.12)+
-    theme_classic()+
+    facet_wrap(.~fitcomp.lab)+
+    ylab("Selection gradient") +xlab("Temperature (°C)")+
+    scale_color_manual(values=cols)+
+    #ylim(-0.3, 0.3)+
+    theme_bw()+xlim(10,36)+
     scale_fill_manual(values = c("sig" = "gray", "ns" = "white"))+
   #add standard errors
   geom_errorbar(aes(x=temp, y=value, ymin=value-se, ymax=value+se), width=0)+
   #add horizontal line
-  geom_hline(yintercept=0, color="gray")
+  geom_hline(yintercept=0, color="gray")+
+    theme(legend.position = "none") #+guides(fill = "none")
   
   #--------------------------------
   #plot curves and selection arrows
   
+  tpc.s<- tpc.agg
+  tpc.s$tp<- paste(tpc.s$temp, tpc.s$period, sep="_") 
+  #add selection data
+  sg$tp<- paste(sg$temp, sg$period, sep="_")
+  match1<- match(sg$tp, tpc.s$tp)
+  sg$gr<- tpc.s$mean[match1]
+  sg$gr.se<- tpc.s$se[match1]
   
-  #see temp plots
-  plot.sel<- Tdist.plot +
-    #add TPC means
-    geom_point(data=tpc.agg.f2, aes(x=temp, y=mean))+
-    #add beta fit
-    geom_line(data=tpc.dat, aes(x=temp, y=rate))+
-    #add 1999 feeding data
-    geom_point(data=tpc.agg.h, aes(x=temp, y=mean))+
-    geom_line(data=tpc.agg.h, aes(x=temp, y=mean))+
+  #plot
+  plot.arr<- ggplot(sg[which(sg$fitcomp %in% c("mass", "surv", "devtime")),], aes(x= temp, y=gr, col=expt, group=expt)) +
+    geom_line(linewidth=1)+
+    facet_wrap(.~fitcomp.lab)+
+    ylab("Growth rate (g/g/h)") + xlab("Temperature (°C)")+
+    theme_bw()+scale_color_manual(values=cols)+
+    ylim(0, 0.04)+xlim(10,36)+
     #add selection arrows
-    geom_segment(data=sg, aes(x = temps, y = ys, xend = temps, yend = ys+pm.sg/20),
-                 arrow = arrow(length = unit(0.5, "cm")), lwd=1.2)+
-    #add additional axis
-    scale_y_continuous(
-      name = "Growth rate (g/g/h)", 
-      sec.axis = sec_axis(~.x * 1, 
-                          name = "Density of environmental data"))
+    geom_segment( aes(x = temp, y = gr, xend = temp, yend = gr+value/15),
+                 arrow = arrow(length = unit(0.2, "cm")), linewidth=1.0, 
+                 position = position_jitter(w = 1, h = 0))+
+    theme(legend.position = "bottom")+labs(col="Study")
+  #scale arrow length
   
   #save plots
-  pdf("./figures/Prapae_selectiongradients.pdf",height = 6, width = 10)
-  plot.sg
+  pdf("./figures/Prapae_selectiongradients.pdf",height = 8, width = 8)
+  plot.sg +plot.arr +plot_layout(ncol=1)+plot_annotation(tag_levels = 'A')
   dev.off()
   
-  #plot models
-  car::avPlots(mod.pmass.s)
-  car::avPlots(mod.puptime.s)
-  
   #==========================================
-  ## P matrices, past and present
+  #FIGURE 4. P, cor matrices, past and present
   
   #RECENT
   #P matrix
@@ -339,14 +350,14 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   plot.var= ggplot(data = var.all[var.all$type=="var",], aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile()+
     facet_grid(.~time)+
-    scale_fill_gradient2(low ="orange", high = "blue", space = "Lab")+
-    theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)") +ggtitle('A. correlation')
+    scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab")+
+    theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)") +ggtitle('A. variance covariance')
   
   cor.var= ggplot(data = var.all[var.all$type=="cor",], aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile()+
     facet_grid(.~time)+
-    scale_fill_gradient2(low ="orange", high = "blue", space = "Lab")+
-    theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)")+ggtitle('B. variance covariance')
+    scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab")+
+    theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)")+ggtitle('B. correlation')
   
   #----------
   #Estimate eigenvectors (principal components)
@@ -375,15 +386,23 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
                  variable.name = "temp")
   evp.l$per.ev<- paste(evp.l$period, evp.l$ev, sep="_")
   
-  plot.ev= ggplot(data = evp.l, aes(x=temp, y=value, color=factor(ev), lty=period, group=per.ev)) + 
+  types<- c("var","cor")
+  types.lab<- c("variance","correlation")
+  evp.l$type.lab<- types.lab[match(evp.l$type, types)]
+  evp.l$type.lab<- factor(evp.l$types.lab, levels=c("variance","correlation"), ordered=TRUE)
+  
+  plot.ev= ggplot(data = evp.l, aes(x=temp, y=value, lty=factor(ev), color=period, group=per.ev)) + 
     geom_point()+geom_smooth(se=FALSE)+ylab("eigenvector")+
-    facet_wrap(type~., ncol=1) +theme_bw(base_size=16) +xlab("Temperature (°C)")
+    facet_wrap(type.lab~., ncol=1) +
+    theme_bw(base_size=16) +xlab("Temperature (°C)")+ylab("Eigenvector")+
+    scale_color_manual(values=cols2)+labs(lty="vector")
+    #scale_color_viridis_d()#+guides(lty = "none")
 
   design <- "AAC
              BBC"
   
   #save figure 
-  pdf("./figures/PrapaeTPC_cov.pdf",height = 10, width = 10)
+  pdf("./figures/PrapaeTPC_cov.pdf",height = 6, width = 10)
  plot.var + cor.var +plot.ev +plot_layout(design = design)
   dev.off()
   
@@ -449,26 +468,31 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   #==============================================
   # Plot trait changes
-  
   tpc.tc<- tpc[,c("f.ind", "expt","Mi","Pupa.wt","Butt..Wt","Time.to.Pupation","Time.to.Eclosion","Fecundity")]
   
   #to long format
   tpc.tcl<- melt(tpc.tc, id.vars = c("f.ind", "expt"), variable.name = "trait")
   
+  #labels
+  traits= c("Mi","Pupa.wt","Butt..Wt","Time.to.Pupation","Time.to.Eclosion","Fecundity")
+  traits.lab= c("Initial mass (mg)","Pupal mass (mg)","Butterfly mass (mg)","Time to pupation (days)","Time to eclosion (days)","Fecundity")
+  tpc.tcl$trait.lab<- traits.lab[match(tpc.tcl$trait, traits)]
+  #order
+  tpc.tcl$trait.lab<- factor(tpc.tcl$trait.lab, levels=c("Initial mass (mg)","Pupal mass (mg)","Butterfly mass (mg)","Time to pupation (days)","Time to eclosion (days)","Fecundity"), ordered=TRUE)
+  
   #plot
   plot.tc<- ggplot(tpc.tcl, aes(x=value,color=expt, group=expt)) + 
     geom_density(aes(fill=expt), alpha=0.5)+
-    facet_wrap(.~trait, scales="free")+
+    facet_wrap(.~trait.lab, scales="free")+
     ylab("Density") +theme_bw()+
-    scale_color_viridis_d()+scale_fill_viridis_d(alpha=0.5)
+    scale_color_manual(values=cols)+scale_fill_manual(values=cols)
   
-  pdf("Prapae_TraitChange.pdf",height = 6, width = 10)
+  pdf("./figures/Prapae_TraitChange.pdf",height = 6, width = 10)
   plot.tc
   dev.off()
   #------------------
   
   # Plot correlations
-  
   plot.cor1<- ggplot(tpc.l, aes(x=Pupa.wt,y=Time.to.Pupation, color=expt)) + 
     geom_point()+geom_smooth(method="lm")
   
