@@ -7,6 +7,7 @@ library(viridis)
 library(nlme)
 library(lme4)
 library(ggridges)
+library(rstatix)
 
 # Load required libraries
 library(lubridate)
@@ -100,6 +101,9 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
   theme_classic(base_size = 18)+ xlim(0,42)+
   labs(x = "Temperature (°C)", color = "Study", fill="Study", y="Density of temperatures") +theme(legend.position = c(0.8, 0.8))
 
+#------
+#Fig 1c. incidence of temperatures over 30C
+
   #==================
 
 #Plot temperature distribution with selection during study period
@@ -116,6 +120,25 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
     theme_classic(base_size = 18)+
     labs(x = "Temperature (°C)", color = "Year", fill="Year") 
   
+  #----
+  #Fig 1a. shift in temp distribution through time
+  #equality of variances
+  Tplot<- as.data.frame(Tplot)
+  Tplot$Year<- factor(Tplot$Year)
+  
+  Tplot %>% levene_test(Tmean~ Year)
+  
+  #welch test
+  Tplot %>% 
+    t_test(Tmean~ Year) %>%
+    add_significance()
+  
+  #equal variances t-test
+  Tplot %>% 
+    t_test(Tmean~ Year, var.equal = TRUE) %>%
+    add_significance()
+  
+  #----
   #load and plot short term growth rate
   #run TPCfits to get data
   tpc.agg.f2 <- as.data.frame(tpc.agg.f2)
@@ -205,6 +228,21 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
     xlim(0,42)+
     ylab("Growth and T densities")+theme(legend.position = "none")
   #solid is f(T); dashed is Z(T)
+  
+  #----
+  #Fig 1a. shift in temp distribution through time
+  #equality of variances
+  ZT<- as.data.frame(ZT)
+  ZT$Year<- factor(ZT$Year)
+  
+  ZT %>% levene_test(z~ Year)
+  
+  ZT %>% 
+    #welch test
+    #t_test(z~ Year) %>%
+    #equal variances t-test
+    t_test(z~ Year, var.equal = TRUE) %>%
+    add_significance()
   
   #==================
   #Temp distributions over time  

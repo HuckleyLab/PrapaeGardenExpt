@@ -109,11 +109,11 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   tpc.b= na.omit(tpc.b)
   
   #single temp
-  mod= lm(RGR35 ~ Mi + period, data= tpc.b) # 11 17 23 29 35
+  mod= lm(RGR35 ~ Mi + period, data= tpc.b) # 11 17 23 35
   anova(mod)
-  #trade-off, significant difference at 23, 29, 35
+  #trade-off, significant difference at 17, 23, 35
   
-  mod.lmer <- lme(RGR35 ~ period,random=~1|Mom, data = tpc.b)
+  mod.lmer <- lme(RGR35 ~ Mi + period,random=~1|Mom, data = tpc.b)
   anova(mod.lmer)
   #same significance
   
@@ -121,11 +121,21 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   tpc.b<- tpc.l[,c("Mom","ID", "Mi", "f.ind","temp","value","period")]
   tpc.b= na.omit(tpc.b)
   
-  mod= lm(value ~ poly(temp)*period*Mi, data= tpc.b)
+  mod= lm(value ~ Mi*poly(temp)*period, data= tpc.b)
   anova(mod)
   
   mod.lmer <- lme(value ~ poly(temp)*period*Mi,random=~1|Mom, data = tpc.b)
-  anova(mod.lmer)
+  table1<- as.data.frame(anova(mod.lmer))
+  colnames(table1)[3:4]<- c("F","p")
+  table1$sig<-""
+  table1$sig[table1$p<0.05]<-"*"
+  table1$sig[table1$p<0.01]<-"**"
+  table1$sig[table1$p<0.001]<-"***"
+  table1$F= round(table1$F,1)
+  table1$p= round(table1$p,4)
+  
+  #Table 1
+  write.csv(table1, "./figures/Table1.csv")
   
   #========================================================
   ## Modeling fitness responses. All three experiments combined: main effects and interactions
@@ -174,6 +184,14 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   ## best model: no interactions
   summary(mod.all.d)
   
+  #--------------
+  #table 2.
+  tab2a <- anova(mod.int.m)
+  tab2b <- anova(mod.all.s)
+  tab2c <- anova(mod.all.d)
+  tab2a$fitcomp <- "pupal mass"
+  tab2b$fitcomp <- "survival"
+  tab2c$fitcomp <- "development time"
   #=======================================
   #ESTIMATE SELECTION GRADIENT
   
@@ -406,6 +424,8 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
  plot.var + cor.var +plot.ev +plot_layout(design = design)
   dev.off()
   
+  #Table S. P and correlation matrices
+  
   #=================================
   # Selection plots supplement
   
@@ -423,46 +443,51 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   plot.surv.b<- ggplot(tpc.l, aes(x=value,y=Pupated)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
-    ylab("Survival") +xlab("RGR (g/g/h)")
+    ylab("Survival") +xlab("RGR (g/g/h)")+
+    theme_bw()
   
   #survival distribution plots
   plot.surv.histb<- ggplot(tpc.l[!is.na(tpc.l$Pupated),], aes(x=value,color=factor(Pupated), group=Pupated)) + 
     facet_grid(expt~temp)+
     geom_density(aes(fill=factor(Pupated)), alpha=0.5)+
-    ylab("Density") +xlab("RGR (g/g/h)")
+    ylab("Density") +xlab("RGR (g/g/h)")+
+    theme_bw()
   
   plot.pt.b<- ggplot(tpc.l, aes(x=value,y=Time.to.Pupation)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
-    ylab("Pupal time (day)") +xlab("RGR (g/g/h)")
+    ylab("Pupal time (day)") +xlab("RGR (g/g/h)")+
+    theme_bw()
   
   plot.ec.b<- ggplot(tpc.l, aes(x=value,y=Fecundity)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
-    ylab("Egg count") +xlab("RGR (g/g/h)")
+    ylab("Egg count") +xlab("RGR (g/g/h)")+
+    theme_bw()
   
   #-------
   #save figures
-  pdf("Fig3_GardenSelection.pdf",height = 8, width = 11)
+  #Figure S1. Pupal mass
+  pdf("./figures/FigS1_GardenSelection.pdf",height = 8, width = 11)
   plot.pm.b
   dev.off()
   
-  #Figure S1. survival
-  pdf("FigS1_GardenSurvival.pdf",height = 8, width = 11)
+  #Figure S2. survival
+  pdf("./figures/FigS2_GardenSurvival.pdf",height = 8, width = 11)
   plot.surv.b
   dev.off()
   
-  pdf("FigS1_GardenSurvivalDist.pdf",height = 8, width = 11)
+  pdf("./figures/FigS3x_GardenSurvivalDist.pdf",height = 8, width = 11)
   plot.surv.histb
   dev.off()
   
   #Figure S2. pupal time
-  pdf("FigS2_GardenPupalTime.pdf",height = 8, width = 11)
+  pdf("./figures/FigS3_GardenPupalTime.pdf",height = 8, width = 11)
   plot.pt.b
   dev.off()
   
-  #Figure S3. egg count
-  pdf("FigS3_GardenEggCount.pdf",height = 8, width = 11)
+  #Figure S4. egg count
+  pdf("./figures/FigS4_GardenEggCount.pdf",height = 8, width = 11)
   plot.ec.b
   dev.off()
   
@@ -487,7 +512,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     ylab("Density") +theme_bw()+
     scale_color_manual(values=cols)+scale_fill_manual(values=cols)
   
-  pdf("./figures/Prapae_TraitChange.pdf",height = 6, width = 10)
+  pdf("./figures/FigS5_Prapae_TraitChange.pdf",height = 6, width = 10)
   plot.tc
   dev.off()
   #------------------
