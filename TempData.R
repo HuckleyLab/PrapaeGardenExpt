@@ -15,11 +15,11 @@ library(tidyr)
 library(readxl)
 
 cols<- viridis_pal(option = "mako")(8)
-cols<- cols[c(2,4,7)]
+colm<- cols[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -104,7 +104,20 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
 #------
 #Fig 1c. incidence of temperatures over 30C
 
-  #==================
+mod1<- lm(Tmean~factor(study), data=tdat.mean)
+
+#make variable whether temperature hot
+tdat.mean$o30<- 0
+tdat.mean$o30[tdat.mean$Tmean>=30]<- 1
+
+tdat.mean
+
+mod1 <- glm(o30~factor(study), family = binomial, data=tdat.mean) 
+
+summary(mod1)
+anova(mod1)
+
+#==================
 
 #Plot temperature distribution with selection during study period
 # OPUS 1999: 15-25 Aug 1999; doy 227-237, 
@@ -235,14 +248,16 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   ZT<- as.data.frame(ZT)
   ZT$Year<- factor(ZT$Year)
   
-  ZT %>% levene_test(z~ Year)
+  mod1 <- lm(z~temp*factor(Year), data=ZT) 
   
-  ZT %>% 
-    #welch test
-    #t_test(z~ Year) %>%
-    #equal variances t-test
-    t_test(z~ Year, var.equal = TRUE) %>%
-    add_significance()
+  #make variable whether temperature hot
+  ZT$o30<- 0
+  ZT$o30[ZT$temp>=30]<- 1
+  
+  mod1 <- glm(z~o30*factor(Year), data=ZT) 
+  
+  summary(mod1)
+  anova(mod1)
   
   #==================
   #Temp distributions over time  
@@ -323,6 +338,19 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
     xlim(0,45)+
     xlab("Temperature (°C)")+
     theme_bw(base_size = 18)
+  
+  #------------
+  #Test increasing incidence of warm temperatures
+  #make variable whether temperature hot
+  mod1<- lm(value~month*period, data=temps1)
+  
+  temps1$o30<- 0
+  temps1$o30[temps1$temp>=25]<- 1
+  
+  mod1 <- glm(o30~month+period, family=binomial, data=temps1) 
+  
+  summary(mod1)
+  anova(mod1)
   
   #----------------
   #Save figures

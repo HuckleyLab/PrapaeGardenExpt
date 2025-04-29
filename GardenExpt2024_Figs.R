@@ -7,13 +7,14 @@ library(viridis)
 library(nlme)
 library(lme4)
 library(car)
+library(rstatix)
 
 colm<- viridis_pal(option = "mako")(8)
 cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -186,19 +187,27 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   #--------------
   #table 2.
-  tab2a <- anova(mod.int.m)
-  tab2b <- anova(mod.all.s)
-  tab2c <- anova(mod.all.d)
-  tab2a$fitcomp <- "pupal mass"
-  tab2b$fitcomp <- "survival"
-  tab2c$fitcomp <- "development time"
+  table2 <- anova(mod.int.m)
+  table2 <- anova(mod.all.s)
+  table2 <- anova(mod.all.d)
+ 
+  colnames(table2)[4:5]<- c("F","p")
+  table2$sig<-""
+  table2$sig[table2$p<0.05]<-"*"
+  table2$sig[table2$p<0.01]<-"**"
+  table2$sig[table2$p<0.001]<-"***"
+  table2$F= round(table2$F,1)
+  table2$p= round(table2$p,4)
+  
+  write.csv(table2, "./figures/tab2a.csv")
+  
   #=======================================
   #ESTIMATE SELECTION GRADIENT
   
   #set up fitness metrics
   tpc.sel<- tpc.all.c
   tpc.sel$surv<- tpc.sel$Pupated
-  tpc.sel$devrate<- tpc.sel$Time.to.Pupation #1/tpc.sel$Time.to.Pupation
+  tpc.sel$devrate<- 1/tpc.sel$Time.to.Pupation
   
   tpc.seln <- tpc.sel %>% 
     group_by(period, expt) %>% 
@@ -223,7 +232,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   expts<- expts.lab
   periods<- c("recent","recent","past")
   rgrs<- c("RGR11","RGR17","RGR23","RGR29","RGR35")
-  fitcomp<- c("mass","surv","devtime", "fec")
+  fitcomp<- c("mass","surv","devrate", "fec")
   
   sg= expand.grid(rgrs, expts.lab, fitcomp)
   sg= as.data.frame(cbind( sg,matrix(NA, nrow=nrow(sg), ncol=4)))
@@ -279,13 +288,13 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   sg$temp<- as.numeric(sg$temp)
   
   #labels
-  fitcomp.lab<- c("Pupal mass (mg)","Survival (%)","Development time (days)", "Fecundity")
+  fitcomp.lab<- c("Pupal mass (mg)","Survival (%)","Development rate (1/days)", "Fecundity")
   sg$fitcomp.lab<- fitcomp.lab[match(sg$fitcomp, fitcomp)]
   #order
-  sg$fitcomp.lab<- factor(sg$fitcomp.lab, levels=c("Pupal mass (mg)","Survival (%)","Development time (days)", "Fecundity"), ordered=TRUE)
+  sg$fitcomp.lab<- factor(sg$fitcomp.lab, levels=c("Pupal mass (mg)","Survival (%)","Development rate (1/days)", "Fecundity"), ordered=TRUE)
   
   #Genetica plot #SWITCH FACETS
-  plot.sg<- ggplot(sg[which(sg$fitcomp %in% c("mass", "surv", "devtime")),], aes(x=temp, y=value, color=expt, fill=sig, group=expt)) + 
+  plot.sg<- ggplot(sg[which(sg$fitcomp %in% c("mass", "surv", "devrate")),], aes(x=temp, y=value, color=expt, fill=sig, group=expt)) + 
     geom_point(size=4, pch=21)+ geom_smooth(se=FALSE)+
     facet_wrap(.~fitcomp.lab)+
     ylab("Selection gradient") +xlab("Temperature (°C)")+
@@ -311,7 +320,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   sg$gr.se<- tpc.s$se[match1]
   
   #plot
-  plot.arr<- ggplot(sg[which(sg$fitcomp %in% c("mass", "surv", "devtime")),], aes(x= temp, y=gr, col=expt, group=expt)) +
+  plot.arr<- ggplot(sg[which(sg$fitcomp %in% c("mass", "surv", "devrate")),], aes(x= temp, y=gr, col=expt, group=expt)) +
     geom_line(linewidth=1)+
     facet_wrap(.~fitcomp.lab)+
     ylab("Growth rate (g/g/h)") + xlab("Temperature (°C)")+
@@ -426,6 +435,44 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   #Table S. P and correlation matrices
   
+  #---------------------------
+  #Compare matrices through time
+  
+  library(heplots)
+  library(evolqg)
+  library(CPC)
+  
+ # Matrix Similarity Metrics
+  MatrixCompare(p.mat, p.mat.h)
+  
+  # Krzanowski's distance
+  #Calculates covariance matrix correlation via Krzanowski Correlation
+  krz_distance <- KrzCor(p.mat, p.mat.h)
+  
+  # Random Skewers analysis
+  # Cheverud, J. M., and Marroig, G. (2007). Comparing covariance matrices: Random skewers method compared to the common principal components model. Genetics and Molecular Biology, 30, 461-469.
+  RandomSkewers(p.mat, p.mat.h, num_vectors = 1000)
+  #returns average value of response vectors correlation ('correlation'), significance ('probability') and standard deviation of response vectors correlation ('correlation_sd')
+  #other: http://www.phytools.org/static.help/skewers.html
+  
+  #Compare matrices via the correlation between response vectors
+  n_skewers = 5
+  skewers = matrix(rnorm(5*n_skewers), 5, n_skewers)
+  DeltaZCorr(p.mat, p.mat.h, skewers)
+  
+  #Eigen analysis
+  #Bookstein, F. L., and P. Mitteroecker, P. "Comparing Covariance Matrices by Relative Eigenanalysis, with Applications to Organismal Biology." Evolutionary Biology 41, no. 2 (June 1, 2014): 336-350. doi:10.1007/s11692-013-9260-5.
+  RelativeEigenanalysis(p.mat, p.mat.h, symmetric = FALSE)
+  
+  PCAsimilarity(p.mat, p.mat.h)
+  
+  #Mantel Test of correlation matrices
+  MantelCor(c.mat.h, c.mat)
+  #returns matrix Pearson correlation coefficient and significance via Mantel permutations
+  
+  #Other packages
+  #https://cloud.r-project.org/web/packages/covTestR/covTestR.pdf
+  #https://rdrr.io/github/bbolker/cpcbp/man/phillips.cpc.html
   #=================================
   # Selection plots supplement
   
@@ -515,6 +562,23 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   pdf("./figures/FigS5_Prapae_TraitChange.pdf",height = 6, width = 10)
   plot.tc
   dev.off()
+  
+  #----
+  #Traits over time
+  
+  tpc.tcl %>% 
+    group_by(trait) %>%
+    levene_test(value~ expt)
+  #time to putation and time to eclosion change in variance
+  
+  tpc.tcl[which(tpc.tcl$trait==traits[2]),] %>% 
+    #group_by(trait) %>%
+    #welch test
+    #t_test(value~ expt) %>%
+    #equal variances t-test
+    t_test(value~expt, var.equal = TRUE) %>%
+    add_significance()
+  
   #------------------
   
   # Plot correlations
