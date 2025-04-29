@@ -63,7 +63,7 @@ tpc.plot= ggplot(tpc.rl, aes(x=temp,y=value)) +
   geom_errorbar(data=tpc.ragg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
   geom_point(data=tpc.ragg, aes(x=temp, y = mean), size=4, col="black", fill=colm[7], pch=21)+
   theme_classic(base_size=16)+xlab("Temperature (°C)")+ylab("")+
-  ggtitle("2024")+ylim(-0.02,0.06)
+  ggtitle("B. 2024")+ylim(-0.02,0.06)
 
 #------------
 #Past TPC
@@ -80,7 +80,7 @@ tpc.plot.p= ggplot(tpc.pl, aes(x=temp,y=value)) +
   geom_errorbar(data=tpc.pagg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
   geom_point(data=tpc.pagg, aes(x=temp, y = mean), size=4, col="black", fill="cornflowerblue", pch=21)+
   theme_classic(base_size=16)+xlab("")+ylab("Growth rate (g/g/h)")+
-  ggtitle("1999")+ylim(-0.02,0.06)
+  ggtitle("A. 1999")+ylim(-0.02,0.06)
 
 #------------
 #plot TPCs over each other
@@ -93,7 +93,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     geom_point(data=tpc.agg, color="black", aes(x=temp, y = mean, fill=factor(period)), size=3, pch=21)+
     theme_classic(base_size=16)+xlab("")+ylab("")+
     labs(color="Year")+ scale_fill_manual(values=c("cornflowerblue",colm[7]))+
-    ggtitle("1999 & 2024") +ylim(-0.02,0.06) + guides(fill = FALSE, color=FALSE)
+    ggtitle("C. 1999 & 2024") +ylim(-0.02,0.06) + guides(fill = FALSE, color=FALSE)
   
 #------------
 #save figure
@@ -388,6 +388,15 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   #----------
   #Estimate eigenvectors (principal components)
+  ep<- eigen(p.mat)
+  eph<- eigen(p.mat.h)
+  ec<- eigen(c.mat)
+  ech<- eigen(c.mat.h)
+  
+  #proportion variance accounted
+  eig<- ech
+  eig$values / sum(eig$values)
+  
   ep<- as.data.frame(eigen(p.mat)$vectors)
   eph<- as.data.frame(eigen(p.mat.h)$vectors)
   ec<- as.data.frame(eigen(c.mat)$vectors)

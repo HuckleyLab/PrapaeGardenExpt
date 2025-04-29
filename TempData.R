@@ -7,15 +7,15 @@ library(viridis)
 library(nlme)
 library(lme4)
 library(ggridges)
-library(rstatix)
+#library(rstatix) #seems to mess up dplyr
 
 # Load required libraries
 library(lubridate)
 library(tidyr)
 library(readxl)
 
-cols<- viridis_pal(option = "mako")(8)
-colm<- cols[c(2,4,7)]
+colm<- viridis_pal(option = "mako")(8)
+cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
@@ -243,7 +243,7 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   #solid is f(T); dashed is Z(T)
   
   #----
-  #Fig 1a. shift in temp distribution through time
+  #Fig 1b. shift in temp distribution through time
   #equality of variances
   ZT<- as.data.frame(ZT)
   ZT$Year<- factor(ZT$Year)
@@ -361,6 +361,6 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
               CD"
   
   pdf("Fig_Tdist.pdf",height = 8, width = 12)
-  plot.sel + TZdist.plot + Tdist.exp.plot + month.plot +plot_layout(design=design) 
+  plot.sel + TZdist.plot + Tdist.exp.plot + month.plot +plot_layout(design=design) +plot_annotation(tag_levels = 'A')
   dev.off()
   #=============================
