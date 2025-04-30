@@ -88,6 +88,8 @@ tdat.mean$study[inds2]<- "June 2024"
 tdat.mean$study[inds3]<- "July 2024"
 #tdat.mean$study[inds4]<- "July 2023"
 #tdat.mean$study[inds5]<- "Aug 2023"
+# temporally order studies
+tdat.mean$study<- factor(tdat.mean$study, levels=c("Aug 1999", "June 2024", "July 2024"), ordered=TRUE)
 
 Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean, color=factor(study), fill=factor(study), group=factor(study))) +  geom_density(alpha=0.5)+
   scale_fill_viridis_d() +scale_color_viridis_d()
@@ -139,17 +141,17 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   Tplot<- as.data.frame(Tplot)
   Tplot$Year<- factor(Tplot$Year)
   
-  Tplot %>% levene_test(Tmean~ Year)
+  #Tplot %>% levene_test(Tmean~ Year)
   
-  #welch test
-  Tplot %>% 
-    t_test(Tmean~ Year) %>%
-    add_significance()
-  
-  #equal variances t-test
-  Tplot %>% 
-    t_test(Tmean~ Year, var.equal = TRUE) %>%
-    add_significance()
+  # #welch test
+  # Tplot %>% 
+  #   t_test(Tmean~ Year) %>%
+  #   add_significance()
+  # 
+  # #equal variances t-test
+  # Tplot %>% 
+  #   t_test(Tmean~ Year, var.equal = TRUE) %>%
+  #   add_significance()
   
   #----
   #load and plot short term growth rate
@@ -272,7 +274,7 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   t.dat<- read.csv("USW00094290_2025.csv")
   t.dat$site="Seattle"
   
-  t.dat$tmin= t.dat$TMIN /10 #divide by ten
+  t.dat$tmin= t.dat$TMIN /10 #divide by ten due to GHCND format
   t.dat$tmax= t.dat$TMAX /10
   
   t.dat$month= round(month(as.POSIXlt(t.dat$DATE)))
@@ -313,10 +315,13 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   #to long format
   temps1<- melt(temps, id.vars=c("period","site","month"))
  
+  #order months colors to correspond to 1c
+  cols.month<- colm[c(4,7,2)]
+  
   #density plot
    month.plot<- ggplot(temps1, aes(x=value, y=month, color=factor(month), fill=factor(month), lty=period))+
     geom_density_ridges(lwd=1.2, alpha=0.5)+
-    scale_color_manual(values=rev(cols))+scale_fill_manual(values=rev(cols))+
+    scale_color_manual(values=cols.month)+scale_fill_manual(values=cols.month)+
     xlim(0,42)+
     ylim(5.9, 9.5)+
     xlab("Temperature (°C)") +ylab("Month")+ 
@@ -327,7 +332,7 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   ggplot(t.dat, aes(x=tmin, color=period, fill=period))+
     facet_wrap(~month)+
     geom_density(alpha=0.5)+
-    scale_color_manual(values=cols)+scale_fill_manual(values=cols)+
+    scale_color_manual(values=cols.month)+scale_fill_manual(values=cols.month)+
     xlim(-20,30)+
     xlab("Temperature (°C)")+
     theme_bw(base_size = 18)

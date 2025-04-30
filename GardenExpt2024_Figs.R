@@ -425,7 +425,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   types<- c("var","cor")
   types.lab<- c("variance","correlation")
   evp.l$type.lab<- types.lab[match(evp.l$type, types)]
-  evp.l$type.lab<- factor(evp.l$types.lab, levels=c("variance","correlation"), ordered=TRUE)
+  evp.l$type.lab<- factor(evp.l$type.lab, levels=c("variance","correlation"), ordered=TRUE)
   
   plot.ev= ggplot(data = evp.l, aes(x=temp, y=value, lty=factor(ev), color=period, group=per.ev)) + 
     geom_point()+geom_smooth(se=FALSE)+ylab("eigenvector")+
@@ -485,46 +485,54 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   #=================================
   # Selection plots supplement
   
-  #drop one outlier big pupal mass
+  #drop one outlier big pupal mass for plotting
   tpc.l<- tpc.l[-which(tpc.l$Pupa.wt>275),]
   
-  #selection plots
+  #update temperature label
+  temp5<- c(11, 17, 23, 29, 35)
+  temps.lab<- c("11°C","17°C","23°C","29°C","35°C")
+  tpc.l$temps.lab<- temps.lab[match(tpc.l$temp, temp5)]
+  tpc.l$temps.lab<- factor(tpc.l$temps.lab, levels=c("11°C","17°C","23°C","29°C","35°C"), ordered=TRUE)
   
+  #selection plots
   plot.pm.b<- ggplot(tpc.l, aes(x=value,y=Pupa.wt)) + 
-    facet_grid(expt~temp)+
+    facet_grid(expt~temps.lab)+
     geom_point()+geom_smooth(method="lm")+
-    ylab("Pupal mass (mg)") +xlab("RGR (g/g/h)")+
-    theme_bw()
+    ylab("Pupal mass (mg)") +xlab("Growth rate (g/g/h)")+
+    theme_bw(base_size=18)
   
   plot.surv.b<- ggplot(tpc.l, aes(x=value,y=Pupated)) + 
-    facet_grid(expt~temp)+
+    facet_grid(expt~temps.lab)+
     geom_point()+geom_smooth(method="lm")+
-    ylab("Survival") +xlab("RGR (g/g/h)")+
-    theme_bw()
+    ylab("Survival") +xlab("Growth rate (g/g/h)")+
+    theme_bw(base_size=18)
   
   #survival distribution plots
   plot.surv.histb<- ggplot(tpc.l[!is.na(tpc.l$Pupated),], aes(x=value,color=factor(Pupated), group=Pupated)) + 
-    facet_grid(expt~temp)+
+    facet_grid(expt~temps.lab)+
     geom_density(aes(fill=factor(Pupated)), alpha=0.5)+
-    ylab("Density") +xlab("RGR (g/g/h)")+
-    theme_bw()
+    ylab("Density") +xlab("Growth rate (g/g/h)")+
+    theme_bw(base_size=18)
   
-  plot.pt.b<- ggplot(tpc.l, aes(x=value,y=Time.to.Pupation)) + 
-    facet_grid(expt~temp)+
+  #change to development rate
+  tpc.l$devrate= 1/tpc.l$Time.to.Pupation
+  
+  plot.pt.b<- ggplot(tpc.l, aes(x=value,y=devrate)) + 
+    facet_grid(expt~temps.lab)+
     geom_point()+geom_smooth(method="lm")+
-    ylab("Pupal time (day)") +xlab("RGR (g/g/h)")+
-    theme_bw()
+    ylab("Development rate (1/day)") +xlab("Growth rate (g/g/h)")+
+    theme_bw(base_size=18)
   
   plot.ec.b<- ggplot(tpc.l, aes(x=value,y=Fecundity)) + 
     facet_grid(expt~temp)+
     geom_point()+geom_smooth(method="lm")+
-    ylab("Egg count") +xlab("RGR (g/g/h)")+
-    theme_bw()
+    ylab("Egg count") +xlab("Growth rate (g/g/h)")+
+    theme_bw(base_size=18)
   
   #-------
   #save figures
   #Figure S1. Pupal mass
-  pdf("./figures/FigS1_GardenSelection.pdf",height = 8, width = 11)
+  pdf("./figures/FigS1_GardenMass.pdf",height = 8, width = 11)
   plot.pm.b
   dev.off()
   
@@ -566,7 +574,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     geom_density(aes(fill=expt), alpha=0.5)+
     facet_wrap(.~trait.lab, scales="free")+
     ylab("Density") +theme_bw()+
-    scale_color_manual(values=cols)+scale_fill_manual(values=cols)
+    scale_color_manual(values=cols)+scale_fill_manual(values=cols)+labs(color="Study", fill="Study")
   
   pdf("./figures/FigS5_Prapae_TraitChange.pdf",height = 6, width = 10)
   plot.tc
