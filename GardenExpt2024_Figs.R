@@ -223,9 +223,25 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
       surv_norm = surv/mean(surv, na.rm = TRUE),
       devrate_norm = devrate /mean(devrate, na.rm = TRUE),
       Pupa.wt_norm = Pupa.wt /mean(Pupa.wt, na.rm = TRUE),
-      Fecundity_norm = Fecundity /mean(Fecundity, na.rm = TRUE)
+      Fecundity_norm = Fecundity /mean(Fecundity, na.rm = TRUE),
+      RGR11m = mean(RGR11, na.rm = TRUE),
+      RGR17m = mean(RGR17, na.rm = TRUE),
+      RGR23m = mean(RGR23, na.rm = TRUE),
+      RGR29m = mean(RGR29, na.rm = TRUE),
+      RGR35m = mean(RGR35, na.rm = TRUE) 
     ) %>%
     ungroup()
+  
+  #mean growth rate
+  tpc.mean <- tpc.sel %>% 
+    group_by(period, expt) %>% 
+    dplyr::summarise(
+      RGR11m = mean(RGR11, na.rm = TRUE),
+      RGR17m = mean(RGR17, na.rm = TRUE),
+      RGR23m = mean(RGR23, na.rm = TRUE),
+      RGR29m = mean(RGR29, na.rm = TRUE),
+      RGR35m = mean(RGR35, na.rm = TRUE) 
+    )
   
   #--------------------------------------
   #set up matrix for coefficients
@@ -257,11 +273,11 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     coef.pmass<- summary(selmod.m)$coefficients
     sg[which(sg$expt==expts[k] & sg$fitcomp=="mass"),c(4:7)]= coef.pmass[2:nrow(coef.pmass),]
     
-    #dev time
+    #dev rate
     selmod.d <- lm(devrate_norm~RGR11_ms+RGR17_ms+RGR23_ms+RGR29_ms+RGR35_ms, data=seln) 
     anova(selmod.d)
     coef.devrate<- summary(selmod.d)$coefficients
-    sg[which(sg$expt==expts[k] & sg$fitcomp=="devtime"),c(4:7)]= coef.devrate[2:nrow(coef.devrate), ]
+    sg[which(sg$expt==expts[k] & sg$fitcomp=="devrate"),c(4:7)]= coef.devrate[2:nrow(coef.devrate), ]
     
     #fecundity
     seln.f<- seln[which(!is.na(seln$Fecundity_norm)),]
@@ -288,28 +304,36 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   sg$temp<- as.numeric(sg$temp)
   
   #labels
-  fitcomp.lab<- c("Pupal mass (mg)","Survival (%)","Development rate (1/days)", "Fecundity")
+  fitcomp.lab<- c("Pupal mass","Survival","Development rate", "Fecundity")
   sg$fitcomp.lab<- fitcomp.lab[match(sg$fitcomp, fitcomp)]
   #order
-  sg$fitcomp.lab<- factor(sg$fitcomp.lab, levels=c("Pupal mass (mg)","Survival (%)","Development rate (1/days)", "Fecundity"), ordered=TRUE)
+  sg$fitcomp.lab<- factor(sg$fitcomp.lab, levels=c("Survival","Development rate", "Pupal mass","Fecundity"), ordered=TRUE)
   
-  #Genetica plot #SWITCH FACETS
+  #Genetica plot
   plot.sg<- ggplot(sg[which(sg$fitcomp %in% c("mass", "surv", "devrate")),], aes(x=temp, y=value, color=expt, fill=sig, group=expt)) + 
     geom_point(size=4, pch=21)+ geom_smooth(se=FALSE)+
-    facet_wrap(.~fitcomp.lab)+
+    facet_wrap(.~fitcomp.lab, scales="free_y")+
     ylab("Selection gradient") +xlab("Temperature (°C)")+
     scale_color_manual(values=cols)+
     #ylim(-0.3, 0.3)+
     theme_bw()+xlim(10,36)+
     scale_fill_manual(values = c("sig" = "gray", "ns" = "white"))+
   #add standard errors
-  geom_errorbar(aes(x=temp, y=value, ymin=value-se, ymax=value+se), width=0)+
+  geom_errorbar(aes(x=temp, y=value, ymin=value-se, ymax=value+se, color=expt), width=0)+
   #add horizontal line
   geom_hline(yintercept=0, color="gray")+
     theme(legend.position = "none") #+guides(fill = "none")
   
   #--------------------------------
   #plot curves and selection arrows
+  
+  #account for normalization by mean
+  tpc.meanl<- melt(tpc.mean, id.vars = c("expt","period"), variable.name = "temp")
+  tpc.meanl$temp<- gsub("m", "", as.character(tpc.meanl$temp))
+  tpc.meanl$et<- paste(tpc.meanl$expt, tpc.meanl$temp, sep="_")
+  sg$et<- paste(sg$expt, sg$rgr, sep="_")
+    
+  sg$value_ms <- sg$value * tpc.meanl$value[match(sg$et, tpc.meanl$et)]
   
   tpc.s<- tpc.agg
   tpc.s$tp<- paste(tpc.s$temp, tpc.s$period, sep="_") 
@@ -327,7 +351,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     theme_bw()+scale_color_manual(values=cols)+
     ylim(0, 0.04)+xlim(10,36)+
     #add selection arrows
-    geom_segment( aes(x = temp, y = gr, xend = temp, yend = gr+value/15),
+    geom_segment( aes(x = temp, y = gr, xend = temp, yend = gr+value_ms),
                  arrow = arrow(length = unit(0.2, "cm")), linewidth=1.0, 
                  position = position_jitter(w = 1, h = 0))+
     theme(legend.position = "bottom")+labs(col="Study")
