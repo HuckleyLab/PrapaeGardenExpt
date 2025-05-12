@@ -7,7 +7,7 @@ library(viridis)
 library(nlme)
 library(lme4)
 library(car)
-library(rstatix)
+#library(rstatix)
 
 colm<- viridis_pal(option = "mako")(8)
 cols<- colm[c(2,4,7)]
@@ -202,7 +202,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   write.csv(table2, "./figures/tab2a.csv")
   
   #=======================================
-  #ESTIMATE SELECTION GRADIENT
+  #FIG 4. ESTIMATE SELECTION GRADIENT
   
   #set up fitness metrics
   tpc.sel<- tpc.all.c
@@ -322,7 +322,9 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   geom_errorbar(aes(x=temp, y=value, ymin=value-se, ymax=value+se, color=expt), width=0)+
   #add horizontal line
   geom_hline(yintercept=0, color="gray")+
-    theme(legend.position = "none") #+guides(fill = "none")
+    theme(legend.position = "none")+ #+guides(fill = "none")+
+  #center scales
+  geom_blank(aes(y = -value, ymin = -(value-se), ymax = -(value+se)))
   
   #--------------------------------
   #plot curves and selection arrows
@@ -349,7 +351,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     facet_wrap(.~fitcomp.lab)+
     ylab("Growth rate (g/g/h)") + xlab("Temperature (°C)")+
     theme_bw()+scale_color_manual(values=cols)+
-    ylim(0, 0.04)+xlim(10,36)+
+    ylim(0.005, 0.035)+xlim(10,36)+
     #add selection arrows
     geom_segment( aes(x = temp, y = gr, xend = temp, yend = gr+value_ms),
                  arrow = arrow(length = unit(0.2, "cm")), linewidth=1.0, 
@@ -358,12 +360,12 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   #scale arrow length
   
   #save plots
-  pdf("./figures/Prapae_selectiongradients.pdf",height = 8, width = 8)
+  pdf("./figures/Fig4_Prapae_selectiongradients.pdf",height = 8, width = 8)
   plot.sg +plot.arr +plot_layout(ncol=1)+plot_annotation(tag_levels = 'A')
   dev.off()
   
   #==========================================
-  #FIGURE 4. P, cor matrices, past and present
+  #FIGURE 3. P, cor matrices, past and present
   
   #RECENT
   #P matrix
@@ -386,9 +388,9 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   #-------------------
   #Combine Var matrices
   p.mat.m$time<- "recent"; p.mat.m$type<- "var"
-  p.mat.m.h$time<- "past"; p.mat.m.h$type<- "var"
+  p.mat.m.h$time<- "initial"; p.mat.m.h$type<- "var"
   c.mat.m$time<- "recent"; c.mat.m$type<- "cor"
-  c.mat.m.h$time<- "past"; c.mat.m.h$type<- "cor"
+  c.mat.m.h$time<- "initial"; c.mat.m.h$type<- "cor"
   
   var.all<- rbind(p.mat.m, p.mat.m.h, c.mat.m, c.mat.m.h)
   var.all$Var1 <- sub("RGR", "", var.all$Var1)
@@ -401,13 +403,15 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   plot.var= ggplot(data = var.all[var.all$type=="var",], aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile()+
     facet_grid(.~time)+
-    scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab")+
+    scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab",
+                         breaks = c(-30,0,130),labels=c(-30,0,130))+
     theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)") +ggtitle('A. variance covariance')
   
   cor.var= ggplot(data = var.all[var.all$type=="cor",], aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile()+
     facet_grid(.~time)+
-    scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab")+
+    scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab",
+                         breaks = c(-0.3,0,1),labels=c(-0.3,0,1))+
     theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)")+ggtitle('B. correlation')
   
   #----------
@@ -427,9 +431,9 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   ech<- as.data.frame(eigen(c.mat.h)$vectors)
   
   ep$period= "recent"; ep$type= "var"; ep$ev= c(1:5)
-  eph$period= "past"; eph$type= "var"; eph$ev= c(1:5)
+  eph$period= "initial"; eph$type= "var"; eph$ev= c(1:5)
   ec$period= "recent"; ec$type= "cor"; ec$ev= c(1:5)
-  ech$period= "past";  ech$type= "cor"; ech$ev= c(1:5)
+  ech$period= "initial";  ech$type= "cor"; ech$ev= c(1:5)
   
   e.all<- rbind(ep, eph, ec, ech)
   colnames(e.all)[1:5]<- c(11, 17, 23, 29, 35)
@@ -437,7 +441,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   e.all<- e.all[which(e.all$ev %in% c(1:2)),]
   
   #flip past ev 2s
-  e.all[which(e.all$ev==2 & e.all$period=="past"),1:5]=  -1*e.all[which(e.all$ev==2 & e.all$period=="past"),1:5]
+  e.all[which(e.all$ev==2 & e.all$period=="initial"),1:5]=  -1*e.all[which(e.all$ev==2 & e.all$period=="initial"),1:5]
   
   #plot eigen vectors
   #to long format
@@ -458,12 +462,17 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     scale_color_manual(values=cols2)+labs(lty="vector")
     #scale_color_viridis_d()#+guides(lty = "none")
 
-  design <- "AAC
-             BBC"
+  design <- "AA
+             BB"
   
   #save figure 
-  pdf("./figures/PrapaeTPC_cov.pdf",height = 6, width = 10)
- plot.var + cor.var +plot.ev +plot_layout(design = design)
+  pdf("./figures/Fig3_PrapaeTPC_cov.pdf",height = 8, width = 8)
+ plot.var + cor.var +plot_layout(design = design)
+  dev.off()
+  
+  #eigenvectors
+  pdf("./figures/FigSx_eigenvectors.pdf",height = 8, width = 8)
+  plot.ev
   dev.off()
   
   #Table S. P and correlation matrices

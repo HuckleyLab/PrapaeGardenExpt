@@ -1,6 +1,5 @@
 library(ggplot2)
 library(data.table)
-library(dplyr)
 library(patchwork)
 library(reshape2)
 library(viridis)
@@ -8,11 +7,9 @@ library(nlme)
 library(lme4)
 library(ggridges)
 #library(rstatix) #seems to mess up dplyr
-
-# Load required libraries
 library(lubridate)
-library(tidyr)
 library(readxl)
+library(dplyr)
 
 colm<- viridis_pal(option = "mako")(8)
 cols<- colm[c(2,4,7)]
@@ -35,8 +32,8 @@ tdat<- tdat[-which(tdat$T=="Logger3.T4.shadedT"),]
 
 #average across sensors
 tdat.mean <- tdat %>%
-  group_by(dt, Date, Time, Year) %>%
-  summarise(Tmean = mean(value, na.rm = TRUE), n=length(value))
+  dplyr::group_by(dt, Date, Time, Year) %>%
+  dplyr::summarise(Tmean = mean(value, na.rm = TRUE), n=length(value)) 
 
 #-----
 #plot distributions for overlapping data, #1997: 224-238; 1999: 227:237
@@ -57,8 +54,8 @@ Tdist.day.plot <- ggplot(tdat.mean, aes(x=Tmean, color=factor(Year), fill=factor
 
 #hourly max, min
 tdat.mean.hr <- tdat %>%
-  group_by(Date, hr, Year) %>%
-  summarise(Tmin = min(value, na.rm = TRUE), Tmax = max(value, na.rm = TRUE), Tmean = mean(value, na.rm = TRUE), n=length(value), .groups = 'drop')
+  dplyr::group_by(Date, hr, Year) %>%
+  dplyr::summarise(Tmin = min(value, na.rm = TRUE), Tmax = max(value, na.rm = TRUE), Tmean = mean(value, na.rm = TRUE), n=length(value), .groups = 'drop')
 
 Tdist.hr.plot <- ggplot(tdat.mean.hr, aes(x=Tmax, color=factor(Year), fill=factor(Year), group=factor(Year))) +  geom_density(alpha=0.5)+
   scale_fill_viridis_d() +scale_color_viridis_d()
@@ -182,10 +179,10 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   
   #plot
   plot.sel<- Tdist.plot +
-    #add TPC means
-    geom_point(data=tpc.agg.f2, aes(x=temp, y=mean))+
+    #No longer: add TPC means
+    #geom_point(data=tpc.agg.f2, aes(x=temp, y=mean))+
     #add beta fit
-    geom_line(data=tpc.dat, aes(x=temp, y=rate))+
+    #geom_line(data=tpc.dat, aes(x=temp, y=rate))+
     #add 1999 feeding data
     geom_point(data=tpc.agg.h, aes(x=temp, y=mean))+
     geom_line(data=tpc.agg.h, aes(x=temp, y=mean))+
