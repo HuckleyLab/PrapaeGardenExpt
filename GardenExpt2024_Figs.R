@@ -326,6 +326,17 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   #center scales
   geom_blank(aes(y = -value, ymin = -(value-se), ymax = -(value+se)))
   
+  #-------------
+  #Table S2. write selection gradients
+  sg.p <- sg[,c("expt", "fitcomp.lab", "temp",  "value", "se", "tvalue", "pvalue")]
+  #order
+  sg.p<- sg.p[order(sg.p$expt, sg.p$fitcomp.lab, sg.p$temp),]
+  #round
+  sg.p[,4:7]<- round( sg.p[,4:7], 3)
+  
+  #write out
+  write.csv(sg.p, "./figures/TableS2_selgradient.csv")
+  
   #--------------------------------
   #plot curves and selection arrows
   
@@ -476,6 +487,22 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   dev.off()
   
   #Table S. P and correlation matrices
+  p.mat2<- as.data.frame(p.mat)
+  p.mat.h2<- as.data.frame(p.mat.h)
+  c.mat2<- as.data.frame(c.mat)
+  c.mat.h2<- as.data.frame(c.mat.h)
+  
+  p.mat2$type= "P"; p.mat2$period="recent"
+  p.mat.h2$type= "P"; p.mat.h2$period="initial"
+  c.mat2$type= "correlation"; c.mat2$period="recent"
+  c.mat.h2$type= "correlation"; c.mat.h2$period="initial"
+  
+  var.all2<- rbind(p.mat2, p.mat.h2, c.mat2, c.mat.h2)
+  #round
+  var.all2[,1:5]=round( var.all2[,1:5], 3)
+  
+  #write out
+  write.csv(var.all2, "./figures/TableS1_pcor.csv")
   
   #---------------------------
   #Compare matrices through time
@@ -515,6 +542,17 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   #Other packages
   #https://cloud.r-project.org/web/packages/covTestR/covTestR.pdf
   #https://rdrr.io/github/bbolker/cpcbp/man/phillips.cpc.html
+  
+  #----------------------
+  #correlations
+  ggplot(data=tpc, aes(x=RGR35, y=RGR29, color=period))+geom_point()+geom_smooth(method=lm)
+  anova(lm(RGR35~RGR29*period, data=tpc))
+  
+  ggplot(data=tpc, aes(x=RGR11, y=RGR23, color=period))+geom_point()+geom_smooth(method=lm)
+  ggplot(data=tpc, aes(x=RGR11, y=RGR29, color=period))+geom_point()+geom_smooth(method=lm)
+  anova(lm(RGR11~RGR23*period, data=tpc))
+  anova(lm(RGR11~RGR29*period, data=tpc))
+  
   #=================================
   # Selection plots supplement
   
@@ -590,25 +628,48 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   #==============================================
   # Plot trait changes
-  tpc.tc<- tpc[,c("f.ind", "expt","Mi","Pupa.wt","Butt..Wt","Time.to.Pupation","Time.to.Eclosion","Fecundity")]
+  tpc.tc<- tpc[,c("f.ind", "expt","Mi","Pupa.wt","Butt..Wt","Time.to.Pupation","Time.to.Eclosion","Fecundity","Pupated")]
+  
+  #means over time
+  tpc.tc.mean <- tpc.tc %>% 
+    group_by(expt) %>% 
+    dplyr::summarise(
+      Mi = mean(Mi, na.rm = TRUE),
+      Pupa.wt = mean(Pupa.wt, na.rm = TRUE),
+      Butt..Wt = mean(Butt..Wt, na.rm = TRUE),
+      Time.to.Pupation = mean(Time.to.Pupation, na.rm = TRUE),
+      Time.to.Eclosion = mean(Time.to.Eclosion, na.rm = TRUE),
+      Fecundity = mean(Fecundity, na.rm = TRUE),
+      Survival = mean(Pupated, na.rm = TRUE)
+    )
   
   #to long format
   tpc.tcl<- melt(tpc.tc, id.vars = c("f.ind", "expt"), variable.name = "trait")
+  tpc.tc.meanl<- melt(tpc.tc.mean, id.vars = c("expt"), variable.name = "trait")
+  tpc.tc.meanl$value[is.nan(tpc.tc.meanl$value)]<-NA
+  #drop survival
+  tpc.tcl<- tpc.tcl[-which(tpc.tcl$trait==Survival),]
+  tpc.tc.meanl<- tpc.tc.meanl[-which(tpc.tc.meanl$trait==Survival),]
   
   #labels
   traits= c("Mi","Pupa.wt","Butt..Wt","Time.to.Pupation","Time.to.Eclosion","Fecundity")
   traits.lab= c("Initial mass (mg)","Pupal mass (mg)","Butterfly mass (mg)","Time to pupation (days)","Time to eclosion (days)","Fecundity")
   tpc.tcl$trait.lab<- traits.lab[match(tpc.tcl$trait, traits)]
+  tpc.tc.meanl$trait.lab<- traits.lab[match(tpc.tc.meanl$trait, traits)]
   #order
   tpc.tcl$trait.lab<- factor(tpc.tcl$trait.lab, levels=c("Initial mass (mg)","Pupal mass (mg)","Butterfly mass (mg)","Time to pupation (days)","Time to eclosion (days)","Fecundity"), ordered=TRUE)
+  tpc.tc.meanl$trait.lab<- factor(tpc.tc.meanl$trait.lab, levels=c("Initial mass (mg)","Pupal mass (mg)","Butterfly mass (mg)","Time to pupation (days)","Time to eclosion (days)","Fecundity"), ordered=TRUE)
   
   #plot
   plot.tc<- ggplot(tpc.tcl, aes(x=value,color=expt, group=expt)) + 
     geom_density(aes(fill=expt), alpha=0.5)+
-    facet_wrap(.~trait.lab, scales="free")+
     ylab("Density") +theme_bw()+
-    scale_color_manual(values=cols)+scale_fill_manual(values=cols)+labs(color="Study", fill="Study")
-  
+    scale_color_manual(values=cols)+scale_fill_manual(values=cols)+labs(color="Study", fill="Study")+
+    #add mean lines
+    geom_vline(data=tpc.tc.meanl, aes(xintercept=value, color=expt, group=expt))+
+    facet_wrap(.~trait.lab, scales="free")+
+    theme(legend.position="bottom")
+    
   pdf("./figures/FigS5_Prapae_TraitChange.pdf",height = 6, width = 10)
   plot.tc
   dev.off()
@@ -618,7 +679,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   tpc.tcl %>% 
     group_by(trait) %>%
-    levene_test(value~ expt)
+    rstatix::levene_test(value~ expt)
   #time to putation and time to eclosion change in variance
   
   tpc.tcl[which(tpc.tcl$trait==traits[2]),] %>% 
@@ -626,8 +687,12 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     #welch test
     #t_test(value~ expt) %>%
     #equal variances t-test
-    t_test(value~expt, var.equal = TRUE) %>%
-    add_significance()
+    rstatix::t_test(value~expt, var.equal = TRUE) %>%
+    rstatix::add_significance()
+  
+  #compare means
+  mod.m<- lm(value~expt, data=tpc.tcl[which(tpc.tcl$trait==traits[6]),])
+  anova(mod.m)
   
   #------------------
   
