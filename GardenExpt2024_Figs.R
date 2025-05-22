@@ -14,7 +14,7 @@ cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -188,7 +188,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   #--------------
   #table 2.
   table2 <- anova(mod.int.m)
-  table2 <- anova(mod.all.s)
+  table2 <- anova(mod.all.s, test="Chisq")
   table2 <- anova(mod.all.d)
  
   colnames(table2)[4:5]<- c("F","p")
@@ -199,7 +199,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   table2$F= round(table2$F,1)
   table2$p= round(table2$p,4)
   
-  write.csv(table2, "./figures/tab2a.csv")
+  write.csv(table2, "./figures/tab2b.csv")
   
   #=======================================
   #FIG 4. ESTIMATE SELECTION GRADIENT
@@ -326,6 +326,23 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   #center scales
   geom_blank(aes(y = -value, ymin = -(value-se), ymax = -(value+se)))
   
+  #fecundity
+  plot.sg.fec<- ggplot(sg[which(sg$fitcomp %in% c("fec")),], aes(x=temp, y=value, color=expt, fill=sig, group=expt)) + 
+    geom_point(size=4, pch=21)+ geom_smooth(se=FALSE)+
+    facet_wrap(.~fitcomp.lab, scales="free_y")+
+    ylab("Selection gradient") +xlab("Temperature (°C)")+
+    scale_color_manual(values=cols)+
+    #ylim(-0.3, 0.3)+
+    theme_bw()+xlim(10,36)+
+    scale_fill_manual(values = c("sig" = "gray", "ns" = "white"))+
+    #add standard errors
+    geom_errorbar(aes(x=temp, y=value, ymin=value-se, ymax=value+se, color=expt), width=0)+
+    #add horizontal line
+    geom_hline(yintercept=0, color="gray")+
+    theme(legend.position = "none")+ #+guides(fill = "none")+
+    #center scales
+    geom_blank(aes(y = -value, ymin = -(value-se), ymax = -(value+se)))
+  
   #-------------
   #Table S2. write selection gradients
   sg.p <- sg[,c("expt", "fitcomp.lab", "temp",  "value", "se", "tvalue", "pvalue")]
@@ -336,7 +353,6 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   #write out
   write.csv(sg.p, "./figures/TableS2_selgradient.csv")
-  
   #--------------------------------
   #plot curves and selection arrows
   
@@ -370,9 +386,27 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     theme(legend.position = "bottom")+labs(col="Study")
   #scale arrow length
   
+  #fec
+  plot.arr.fec<- ggplot(sg[which(sg$fitcomp %in% c("fec")),], aes(x= temp, y=gr, col=expt, group=expt)) +
+    geom_line(linewidth=1)+
+    facet_wrap(.~fitcomp.lab)+
+    ylab("Growth rate (g/g/h)") + xlab("Temperature (°C)")+
+    theme_bw()+scale_color_manual(values=cols)+
+    ylim(0.005, 0.035)+xlim(10,36)+
+    #add selection arrows
+    geom_segment( aes(x = temp, y = gr, xend = temp, yend = gr+value_ms),
+                  arrow = arrow(length = unit(0.2, "cm")), linewidth=1.0, 
+                  position = position_jitter(w = 1, h = 0))+
+    theme(legend.position = "bottom")+labs(col="Study")
+  
   #save plots
   pdf("./figures/Fig4_Prapae_selectiongradients.pdf",height = 8, width = 8)
   plot.sg +plot.arr +plot_layout(ncol=1)+plot_annotation(tag_levels = 'A')
+  dev.off()
+  
+  #fecundity plots
+  pdf("./figures/Fig4_Prapae_selectiongradients_fec.pdf",height = 8, width = 4)
+  plot.sg.fec +plot.arr.fec +plot_layout(ncol=1)+plot_annotation(tag_levels = 'A')
   dev.off()
   
   #==========================================
