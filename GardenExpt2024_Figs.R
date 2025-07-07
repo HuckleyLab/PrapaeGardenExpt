@@ -14,7 +14,7 @@ cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -409,6 +409,30 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   plot.sg.fec +plot.arr.fec +plot_layout(ncol=1)+plot_annotation(tag_levels = 'A')
   dev.off()
   
+  #---------------------------
+  #mean and sd fitness metrics
+  
+  tpc.mfit <- tpc.sel %>% 
+    group_by(expt) %>% 
+    dplyr::summarize(
+      surv.m = mean(surv, na.rm = TRUE),
+      surv.sd = sd(surv, na.rm = TRUE),
+      devrate.m = mean(devrate, na.rm = TRUE),
+      devrate.sd = sd(devrate, na.rm = TRUE),
+      Pupa.wt.m = mean(Pupa.wt, na.rm = TRUE),
+      Pupa.wt.sd = sd(Pupa.wt, na.rm = TRUE),
+      Fecundity.m = mean(Fecundity, na.rm = TRUE),
+      Fecundity.sd = sd(Fecundity, na.rm = TRUE)
+    )
+
+  #round
+  tpc.mfit[,c(2:3)] <- round(tpc.mfit[,c(2:3)], 3) 
+  tpc.mfit[,c(4:5)] <- round(tpc.mfit[,c(4:5)], 4)
+  tpc.mfit[,c(6:9)] <- round(tpc.mfit[,c(6:9)], digits=2)
+  
+  #save table  
+  write.csv( tpc.mfit, "./figures/FitTable.csv")
+  
   #==========================================
   #FIGURE 3. P, cor matrices, past and present
   
@@ -682,8 +706,8 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   tpc.tc.meanl<- melt(tpc.tc.mean, id.vars = c("expt"), variable.name = "trait")
   tpc.tc.meanl$value[is.nan(tpc.tc.meanl$value)]<-NA
   #drop survival
-  tpc.tcl<- tpc.tcl[-which(tpc.tcl$trait==Survival),]
-  tpc.tc.meanl<- tpc.tc.meanl[-which(tpc.tc.meanl$trait==Survival),]
+  tpc.tcl<- tpc.tcl[-which(tpc.tcl$trait=="Pupated"),]
+  tpc.tc.meanl<- tpc.tc.meanl[-which(tpc.tc.meanl$trait=="Survival"),]
   
   #labels
   traits= c("Mi","Pupa.wt","Butt..Wt","Time.to.Pupation","Time.to.Eclosion","Fecundity")
@@ -725,7 +749,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     rstatix::add_significance()
   
   #compare means
-  mod.m<- lm(value~expt, data=tpc.tcl[which(tpc.tcl$trait==traits[6]),])
+  mod.m<- lm(value~expt, data=tpc.tcl[which(tpc.tcl$trait==traits[5]),])
   anova(mod.m)
   
   #------------------
