@@ -14,7 +14,7 @@ cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -378,7 +378,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     facet_wrap(.~fitcomp.lab)+
     ylab("Growth rate (g/g/h)") + xlab("Temperature (°C)")+
     theme_bw()+scale_color_manual(values=cols)+
-    ylim(0.005, 0.035)+xlim(10,36)+
+    ylim(0.0045, 0.0315)+xlim(10,36)+
     #add selection arrows
     geom_segment( aes(x = temp, y = gr, xend = temp, yend = gr+value_ms),
                  arrow = arrow(length = unit(0.2, "cm")), linewidth=1.0, 
