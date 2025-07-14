@@ -238,7 +238,19 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
       #add growth rate distribution
       geom_line(data=ZT, aes(x=temp, y=z), lty="dashed", linewidth=0.75)+
     xlim(0,42)+
-    ylab("Growth and T densities")+theme(legend.position = "none")
+    ylab("Densities")+theme(legend.position = "none")+ #ylab("Growth and T densities")
+    #add 1999 feeding data
+    geom_point(data=tpc.agg.h, aes(x=temp, y=mean))+
+    geom_line(data=tpc.agg.h, aes(x=temp, y=mean))+
+    #add selection arrows
+    geom_segment(data=sg, aes(x = temps, y = ys, xend = temps, yend = ys+pm.sg/20),
+                 arrow = arrow(length = unit(0.5, "cm")), lwd=1.2)+
+    xlim(0,42)+ theme(legend.position = c(0.8, 0.8))#
+  #add additional axis
+  scale_y_continuous(
+    name = "Densities", 
+    sec.axis = sec_axis(~.x * 1, 
+                        name = "Growth rate (g/g/h)"))
   #solid is f(T); dashed is Z(T)
   
   #----
@@ -289,9 +301,9 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   t.dat= t.dat[which(t.dat$year %in% c(1994:2024)),]
   t.dat1= t.dat[which(t.dat$year %in% c(1990:1999)),]
   #or 87-92, 1990:1994
-  t.dat1$period="initial"
+  t.dat1$period="1990-1999"
   t.dat2= t.dat[which(t.dat$year %in% c(2015:2024)),]
-  t.dat2$period="recent"
+  t.dat2$period="2015-2024"
   #combine
   t.dat= rbind(t.dat1,t.dat2)
   
@@ -359,10 +371,13 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
   if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
   
-  design <- "AB
-              CD"
+  # design <- "AB
+  #              CD"
+  design<- "A
+  B
+  C"
   
   pdf("Fig_Tdist.pdf",height = 8, width = 12)
-  plot.sel + TZdist.plot + Tdist.exp.plot + month.plot +plot_layout(design=design) +plot_annotation(tag_levels = 'A')
+  month.plot + TZdist.plot + Tdist.exp.plot + plot_layout(design=design) +plot_annotation(tag_levels = 'A')
   dev.off()
   #=============================
