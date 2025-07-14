@@ -374,28 +374,28 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   #plot
   plot.arr<- ggplot(sg[which(sg$fitcomp %in% c("mass", "surv", "devrate")),], aes(x= temp, y=gr, col=expt, group=expt)) +
-    geom_line(linewidth=1)+
+    geom_line(linewidth=1.5)+
     facet_wrap(.~fitcomp.lab)+
     ylab("Growth rate (g/g/h)") + xlab("Temperature (°C)")+
     theme_bw()+scale_color_manual(values=cols)+
-    ylim(0.005, 0.035)+xlim(10,36)+
+    ylim(0.003, 0.035)+xlim(10,36)+
     #add selection arrows
     geom_segment( aes(x = temp, y = gr, xend = temp, yend = gr+value_ms),
-                 arrow = arrow(length = unit(0.2, "cm")), linewidth=1.0, 
+                 arrow = arrow(length = unit(0.2, "cm")), linewidth=0.75, 
                  position = position_jitter(w = 1, h = 0))+
     theme(legend.position = "bottom")+labs(col="Study")
   #scale arrow length
   
   #fec
   plot.arr.fec<- ggplot(sg[which(sg$fitcomp %in% c("fec")),], aes(x= temp, y=gr, col=expt, group=expt)) +
-    geom_line(linewidth=1)+
+    geom_line(linewidth=1.5)+
     facet_wrap(.~fitcomp.lab)+
     ylab("Growth rate (g/g/h)") + xlab("Temperature (°C)")+
     theme_bw()+scale_color_manual(values=cols)+
     ylim(0.005, 0.035)+xlim(10,36)+
     #add selection arrows
     geom_segment( aes(x = temp, y = gr, xend = temp, yend = gr+value_ms),
-                  arrow = arrow(length = unit(0.2, "cm")), linewidth=1.0, 
+                  arrow = arrow(length = unit(0.2, "cm")), linewidth=0.75, 
                   position = position_jitter(w = 1, h = 0))+
     theme(legend.position = "bottom")+labs(col="Study")
   
@@ -472,16 +472,21 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   plot.var= ggplot(data = var.all[var.all$type=="var",], aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile()+
     facet_grid(.~time)+
-    scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab",
-                         breaks = c(-30,0,130),labels=c(-30,0,130))+
+    scale_fill_gradientn(colours = c("darkgreen","white","darkblue"), 
+                         values = rescale(c(-135,0,135)),
+                         guide = "colorbar", limits=c(-135,135))+
     theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)") +ggtitle('A. variance covariance')
   
   cor.var= ggplot(data = var.all[var.all$type=="cor",], aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile()+
     facet_grid(.~time)+
-    scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab",
-                         breaks = c(-0.3,0,1),labels=c(-0.3,0,1))+
+    scale_fill_gradientn(colours = c("darkgreen","white","darkblue"), 
+                         values = rescale(c(-1,0,1)),
+                         guide = "colorbar", limits=c(-1,1))+
     theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)")+ggtitle('B. correlation')
+    
+    #scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab",
+    #                     breaks = c(-1,0,1),labels=c(-1,0,1))+ #changed from -0.3 to -1
   
   #----------
   #Estimate eigenvectors (principal components)
