@@ -33,8 +33,8 @@ length(tpc.h$uid[which(tpc.h$temp==23)])
 tpc.h$RGR <- as.numeric(tpc.h$RGR)
 
 #wide format
-tpc.hw<- spread(tpc.h[,c("uid","temp","Mo")], temp, Mo) #Test with Mo then use RGR
-colnames(tpc.hw)[2:6]<- paste("Mo", colnames(tpc.hw)[2:6], sep="")
+tpc.hw<- spread(tpc.h[,c("uid","temp","TRGR")], temp, TRGR) #Test with Mo then use RGR
+colnames(tpc.hw)[2:6]<- paste("RGR", colnames(tpc.hw)[2:6], sep="")
 
 #------
 #load data
@@ -60,6 +60,7 @@ match1<- match(tpc$uid, tpc.hw$uid)
 #55 of 206 without matches
 
 #check match
-plot(tpc$Mi, tpc.hw$Mo11[match1])
+#plot(tpc$Mi, tpc.hw$Mo11[match1])
+plot(tpc$RGR23, tpc.hw$RGR23[match1])
 
 
