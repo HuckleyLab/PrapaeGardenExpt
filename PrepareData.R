@@ -7,12 +7,13 @@ library(viridis)
 library(nlme)
 library(lme4)
 library(stringr)
+library(tidyr)
 
 home<- getwd()
 
 #GARDEN DATA
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/")
@@ -197,9 +198,52 @@ tpc.h$period<- "past"
 #combine past and recent
 tpc<- rbind(tpc, tpc.h)
 
+#-----------------------
+#FIX NAs in past data
+
+#load data
+tpc.h<- read.csv("./Prapae Fieldseln.1999.Exp2.finallabdata.jul2025_cleanedsheet.csv")
+
+#unique ID
+tpc.h$uid <- paste(tpc.h$mom, tpc.h$ID, "aug", sep="_")
+
+#recalculate growth rate
+tpc.h$RGRn= (log10(as.numeric(tpc.h$fw.lrv)*0.001)-log10(as.numeric(tpc.h$iw.lrv)*0.001))/tpc.h$duration
+#fix infinite due to 0 final weight
+tpc.h$RGRn[which(!is.finite(tpc.h$RGRn))]<- NA
+
+#wide format
+tpc.hw<- spread(tpc.h[,c("uid","temp","RGRn")], temp, RGRn) #Test with Mo then use TRGR
+colnames(tpc.hw)[2:6]<- paste("RGR", colnames(tpc.hw)[2:6], sep="")
+
+#match to data
+tpc$uid <- paste(tpc$Mom, tpc$ID, tpc$expt, sep="_")
+
+#find what needs matches by temp 
+#"RGR23"
+inds<- which(is.na(tpc$RGR23) & tpc$expt=="aug")
+match1<- match(tpc$uid[inds], tpc.hw$uid) 
+tpc$RGR23[inds]<- tpc.hw$RGR23[match1]
+#"RGR29"
+inds<- which(is.na(tpc$RGR29) & tpc$expt=="aug")
+match1<- match(tpc$uid[inds], tpc.hw$uid) 
+tpc$RGR29[inds]<- tpc.hw$RGR29[match1]
+#"RGR11"
+inds<- which(is.na(tpc$RGR11) & tpc$expt=="aug")
+match1<- match(tpc$uid[inds], tpc.hw$uid) 
+tpc$RGR11[inds]<- tpc.hw$RGR11[match1]
+#"RGR17": drops from 109 to 49 NAs
+inds<- which(is.na(tpc$RGR17) & tpc$expt=="aug")
+match1<- match(tpc$uid[inds], tpc.hw$uid) 
+tpc$RGR17[inds]<- tpc.hw$RGR17[match1]
+#"RGR35"
+inds<- which(is.na(tpc$RGR35) & tpc$expt=="aug")
+match1<- match(tpc$uid[inds], tpc.hw$uid) 
+tpc$RGR35[inds]<- tpc.hw$RGR35[match1]
+
 #write out
 setwd(home)
-write.csv(tpc, "data/PrapaeGardenExpt_WARP.csv")
+write.csv(tpc, "./PrapaeGardenExpt_WARP.csv")
 
 #================================================
 #TEMPERATURE DATA

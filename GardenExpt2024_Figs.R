@@ -33,6 +33,7 @@ tpc$expt <- factor(tpc$expt, levels= c("Aug 1999","June 2024","July 2024"), orde
 #to long format
 tpc.l <- melt(tpc, id.vars = c("Mom", "ID", "f.ind", "expt","period","Mi","Pupa.wt","Fecundity", "Time.to.Pupation","Pupated","Eclosed","Time.to.Eclosion","Sex","Butt..Wt"), variable.name = "temp")
 tpc.l$temp= as.numeric(gsub("RGR","",tpc.l$temp))
+tpc.l$value= as.numeric(tpc.l$value)
 
 #estimate family mean values
 tpc.agg.f <- tpc.l %>% 
@@ -199,7 +200,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   table2$F= round(table2$F,1)
   table2$p= round(table2$p,4)
   
-  write.csv(table2, "./figures/tab2b.csv")
+  write.csv(table2, "./figures/tab2c.csv")
   
   #=======================================
   #FIG 4. ESTIMATE SELECTION GRADIENT
