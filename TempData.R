@@ -94,11 +94,12 @@ Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean
 # just daylight
 #tdat.day<- tdat.mean[which(tdat.mean$dec.dt>0.25 & tdat.mean$dec.dt<0.85),]
 
-Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean, color=factor(study), fill=factor(study), group=factor(study))) +  geom_density(alpha=0.5)+
+Tdist.exp.plot <- ggplot(tdat.mean[which(!is.na(tdat.mean$study)),], aes(x=Tmean, color=factor(study), fill=factor(study), group=factor(study), lty=factor(Year))) +  geom_density(alpha=0.5)+
   scale_fill_manual(values=cols) +scale_color_manual(values=cols)+
   #scale_fill_viridis_d(option = "G") +scale_color_viridis_d(option = "G")+
   theme_classic(base_size = 18)+ xlim(0,42)+
-  labs(x = "Temperature (°C)", color = "Study", fill="Study", y="Density of temperatures") +theme(legend.position = c(0.8, 0.8))
+  labs(x = "Temperature (°C)", color = "Study", fill="Study", y="Density") +theme(legend.position = c(0.9, 0.9))+
+  guides(lty="none")
 
 #------
 #Fig 1c. incidence of temperatures over 30C
@@ -231,26 +232,28 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   ZT= rbind(ZT, ZTp)
   
   #----
-  TZdist.plot <- ggplot(Tplot, aes(x=Tmean, color=factor(Year), fill=factor(Year))) +  geom_density(alpha=0.5)+
+  TZdist.plot <- ggplot(Tplot, aes(x=Tmean, color=factor(Year), lty=factor(Year) )) +  
+    geom_density(data=Tplot, alpha=0.5, aes(fill=factor(Year)))+
     scale_fill_manual(values=cols2) +scale_color_manual(values=cols2)+
     theme_classic(base_size = 18)+
     labs(x = "Temperature (°C)") +
       #add growth rate distribution
-      geom_line(data=ZT, aes(x=temp, y=z), lty="dashed", linewidth=0.75)+
+      geom_line(data=ZT, aes(x=temp, y=z), linewidth=0.75)+
     xlim(0,42)+
     ylab("Densities")+theme(legend.position = "none")+ #ylab("Growth and T densities")
     #add 1999 feeding data
     geom_point(data=tpc.agg.h, aes(x=temp, y=mean))+
-    geom_line(data=tpc.agg.h, aes(x=temp, y=mean))+
+    geom_line(data=tpc.agg.h, aes(x=temp, y=mean), lwd=1.4)+
     #add selection arrows
     geom_segment(data=sg, aes(x = temps, y = ys, xend = temps, yend = ys+pm.sg/20),
                  arrow = arrow(length = unit(0.5, "cm")), lwd=1.2)+
-    xlim(0,42)+ theme(legend.position = c(0.8, 0.8))#
+    xlim(0,42)+ theme(legend.position = c(0.8, 0.8))+
   #add additional axis
   scale_y_continuous(
-    name = "Densities", 
+    name = "Density", 
     sec.axis = sec_axis(~.x * 1, 
-                        name = "Growth rate (g/g/h)"))
+                        name = "Growth rate (g/g/h)"))+ 
+    labs(lty="Year", color="Year", fill="Year")
   #solid is f(T); dashed is Z(T)
   
   #----
@@ -334,8 +337,8 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
     xlim(0,42)+
     ylim(5.9, 9.5)+
     xlab("Temperature (°C)") +ylab("Month")+ 
-    guides(fill="none", color="none")+ labs(lty="Period")+
-    theme_classic(base_size = 18)+theme(legend.position = c(0.9, 0.8))
+    guides(fill="none", color="none")+ labs(lty="Years")+
+    theme_classic(base_size = 18)+theme(legend.position = c(0.9, 0.9))
   
   #min, max distributions
   ggplot(t.dat, aes(x=tmin, color=period, fill=period))+
@@ -377,7 +380,7 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   B
   C"
   
-  pdf("Fig_Tdist.pdf",height = 8, width = 12)
+  pdf("Fig_Tdist.pdf",height = 10, width = 6)
   month.plot + TZdist.plot + Tdist.exp.plot + plot_layout(design=design) +plot_annotation(tag_levels = 'A')
   dev.off()
   #=============================

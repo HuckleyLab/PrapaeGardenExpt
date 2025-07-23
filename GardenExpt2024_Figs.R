@@ -14,14 +14,14 @@ cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
 #load data
 tpc<- read.csv("./data/PrapaeGardenExpt_WARP.csv")
 #drop unneeded columns
-tpc<- tpc[,-which(colnames(tpc) %in% c("X", "Species", "Population", "Study.Site"))]
+tpc<- tpc[,-which(colnames(tpc) %in% c("X", "Species", "Population", "Study.Site","uid"))]
 
 #update experiment labels
 expts<- c("june","july","aug")
@@ -88,12 +88,14 @@ tpc.plot.p= ggplot(tpc.pl, aes(x=temp,y=value)) +
 tpc.agg.f$MomPer<- paste(tpc.agg.f$Mom, tpc.agg.f$period, sep="_")
 
 tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
-  geom_line(aes(group=MomPer),linewidth=1, alpha=0.6) +scale_color_manual(values=cols2)+
+  #geom_line(aes(group=MomPer),linewidth=1, alpha=0.6) +scale_color_manual(values=cols2)+
   #add means
- geom_errorbar(data=tpc.agg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se, col=factor(period)), width=0)+
+  geom_line(data=tpc.agg, aes(x=temp, y = mean, color=factor(period)), lwd=2)+
+ geom_errorbar(data=tpc.agg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), col="black", width=1.5, lwd=1)+ 
     geom_point(data=tpc.agg, color="black", aes(x=temp, y = mean, fill=factor(period)), size=3, pch=21)+
     theme_classic(base_size=16)+xlab("")+ylab("")+
     labs(color="Year")+ scale_fill_manual(values=c("cornflowerblue",colm[7]))+
+  scale_color_manual(values=cols2)+
     ggtitle("C. 1999 & 2024") +ylim(-0.02,0.06) + guides(fill = FALSE, color=FALSE)
   
 #------------
@@ -111,9 +113,9 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   tpc.b= na.omit(tpc.b)
   
   #single temp
-  mod= lm(RGR35 ~ Mi + period, data= tpc.b) # 11 17 23 35
+  mod= lm(RGR35 ~ Mi + period, data= tpc.b) # 11 17 23 29 35
   anova(mod)
-  #trade-off, significant difference at 17, 23, 35
+  #trade-off, significant difference at 23, 35
   
   mod.lmer <- lme(RGR35 ~ Mi + period,random=~1|Mom, data = tpc.b)
   anova(mod.lmer)
@@ -123,10 +125,10 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   tpc.b<- tpc.l[,c("Mom","ID", "Mi", "f.ind","temp","value","period")]
   tpc.b= na.omit(tpc.b)
   
-  mod= lm(value ~ Mi*poly(temp)*period, data= tpc.b)
+  mod= lm(value ~ Mi*poly(temp,3)*period, data= tpc.b)
   anova(mod)
   
-  mod.lmer <- lme(value ~ poly(temp)*period*Mi,random=~1|Mom, data = tpc.b)
+  mod.lmer <- lme(value ~ poly(temp,3)*period*Mi,random=~1|Mom, data = tpc.b)
   table1<- as.data.frame(anova(mod.lmer))
   colnames(table1)[3:4]<- c("F","p")
   table1$sig<-""
@@ -138,6 +140,19 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   #Table 1
   write.csv(table1, "./figures/Table1.csv")
+  
+  #assess potential for acclimation
+  tpc.b<- tpc.l[which(tpc.l$period=="recent"),c("Mom","ID", "Mi", "f.ind","temp","value","expt")]
+  tpc.b= na.omit(tpc.b)
+  
+  mod= lm(value ~ Mi*poly(temp,3)*expt, data= tpc.b)
+  anova(mod)
+  
+  mod.lmer <- lme(value ~ poly(temp,3)*expt*Mi,random=~1|Mom, data = tpc.b)
+  anova(mod.lmer)
+  
+  sjPlot::plot_model(mod.lmer, type = "pred", terms = c("temp", "expt"), show.data=FALSE, title="")
+  
   
   #========================================================
   ## Modeling fitness responses. All three experiments combined: main effects and interactions
@@ -199,6 +214,8 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   table2$sig[table2$p<0.001]<-"***"
   table2$F= round(table2$F,1)
   table2$p= round(table2$p,4)
+  table2[,2]= round(table2[,2],1)
+  table2[,3]= round(table2[,3],1)
   
   write.csv(table2, "./figures/tab2c.csv")
   
@@ -379,7 +396,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     facet_wrap(.~fitcomp.lab)+
     ylab("Growth rate (g/g/h)") + xlab("Temperature (°C)")+
     theme_bw()+scale_color_manual(values=cols)+
-    ylim(0.003, 0.0315)+xlim(10,36)+
+    #ylim(0.003, 0.0315)+xlim(10,36)+
     #add selection arrows
     geom_segment( aes(x = temp, y = gr, xend = temp, yend = gr+value_ms),
                  arrow = arrow(length = unit(0.2, "cm")), linewidth=0.75, 
@@ -393,7 +410,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     facet_wrap(.~fitcomp.lab)+
     ylab("Growth rate (g/g/h)") + xlab("Temperature (°C)")+
     theme_bw()+scale_color_manual(values=cols)+
-    ylim(0.003, 0.035)+xlim(10,36)+
+    #ylim(0.003, 0.035)+xlim(10,36)+
     #add selection arrows
     geom_segment( aes(x = temp, y = gr, xend = temp, yend = gr+value_ms),
                   arrow = arrow(length = unit(0.2, "cm")), linewidth=0.75, 
@@ -482,8 +499,8 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     geom_tile()+
     facet_grid(.~time)+
     scale_fill_gradientn(colours = c("darkgreen","white","darkblue"), 
-                         values = rescale(c(-135,0,135)),
-                         guide = "colorbar", limits=c(-135,135))+
+                         values = rescale(c(-1,0,1)),
+                         guide = "colorbar", limits=c(-1,1))+
     theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)")+ggtitle('B. correlation')
   
   #scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab",
@@ -515,8 +532,9 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   #restrict to first 2 eigenvectors
   e.all<- e.all[which(e.all$ev %in% c(1:2)),]
   
-  #flip past ev 2s
-  e.all[which(e.all$ev==2 & e.all$period=="initial"),1:5]=  -1*e.all[which(e.all$ev==2 & e.all$period=="initial"),1:5]
+  #flip past evs for correlation
+ #e.all[which(e.all$ev==2 & e.all$period=="initial" & e.all$type=="cor"),1:5]=  -1*e.all[which(e.all$ev==2 & e.all$period=="initial" & e.all$type=="cor"),1:5]
+ # e.all[which(e.all$period=="initial" & e.all$type=="cor"),1:5]=  -1*e.all[which(e.all$period=="initial" & e.all$type=="cor"),1:5]
   
   #plot eigen vectors
   #to long format
@@ -546,7 +564,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   dev.off()
   
   #eigenvectors
-  pdf("./figures/FigSx_eigenvectors.pdf",height = 8, width = 8)
+  pdf("./figures/FigS1_eigenvectors.pdf",height = 8, width = 8)
   plot.ev
   dev.off()
   
@@ -616,7 +634,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   ggplot(data=tpc, aes(x=RGR11, y=RGR29, color=period))+geom_point()+geom_smooth(method=lm)
   anova(lm(RGR11~RGR23*period, data=tpc))
   anova(lm(RGR11~RGR29*period, data=tpc))
-  
+
   #=================================
   # Selection plots supplement
   
@@ -746,7 +764,8 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     rstatix::levene_test(value~ expt)
   #time to putation and time to eclosion change in variance
   
-  tpc.tcl[which(tpc.tcl$trait==traits[2]),] %>% 
+  #traits: "Mi"               "Pupa.wt"          "Butt..Wt"         "Time.to.Pupation" "Time.to.Eclosion" "Fecundity"  
+  tpc.tcl[which(tpc.tcl$trait==traits[1]),] %>% 
     #group_by(trait) %>%
     #welch test
     #t_test(value~ expt) %>%

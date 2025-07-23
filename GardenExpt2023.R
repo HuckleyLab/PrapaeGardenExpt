@@ -5,12 +5,16 @@ library(patchwork)
 library(reshape2)
 library(viridis)
 
-setwd('/Volumes/GoogleDrive/Shared drives/TrEnCh/Projects/WARP/Analyses/data/PrapaeGarden2023/')
+desktop<- "y"
+if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/data/PrapaeGarden2023/")
+if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Analyses/data/PrapaeGarden2023/")
 
 tpc1= read.csv("CaterpillarTPC_8Jul2023.csv")
 tpc1$date= "8Jul2023"
+tpc1$expt="July 8 2023"
 tpc2= read.csv("CaterpillarTPC_10Jul2023.csv")
 tpc2$date= "10Jul2023"
+tpc2$expt="July 8 2023"
 
 #add second batch
 tpc3= read.csv("CaterpillarExpt2DataSheet_30July2023.csv")
@@ -18,6 +22,7 @@ tpc3$X= NA
 tpc3$date= "30Jul2023"
 #make unique female
 tpc3$FEMALE= paste("30Jul", tpc3$FEMALE, sep="_")
+tpc3$expt="July 30 2023"
 
 #restrict to observations
 tpc1= tpc1[!is.na(tpc1$FEMALE),]
@@ -56,6 +61,13 @@ tpc$rgr_17[tpc$X17.notes %in% c("O", NA)]<- NA
 tpc$rgr_35[tpc$X35.notes %in% c("O", NA)]<- NA 
 
 tpc$f.ind= paste(tpc$FEMALE, tpc$INDV, sep="_")
+
+#write out
+tpc.write<- tpc[,c("FEMALE","INDV","f.ind","X23.mass.i","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35","expt")]
+names(tpc.write) <- c("Mom","ID","f.ind","Mi","RGR23","RGR29","RGR11","RGR17","RGR35","expt")
+write.csv(tpc.write, "PrapaeGardenExpt_WARP_TPC2023.csv")
+
+#----------
 tpc= tpc[,c("FEMALE","f.ind","rgr_23","rgr_29","rgr_11","rgr_17","rgr_35")]
 
 #to long format
