@@ -288,7 +288,77 @@ tpc.all.plot= ggplot(tpc.agg.f.all, aes(x=temp,y=mean, col=factor(year)))+
     plot.p.mat + plot.cov.old
   dev.off()
   
-  #-------------------- 
-  plot.cov
-  plot.cov.old
+  #================================
+  #assess expt survival
+  
+  tpc1<- tpc.write[which(tpc.write$expt=="July 30 2023"),]
+  
+  gdat= read.csv("fieldcheckround2data2023.csv")
+  nrow(gdat)
+  length(which(gdat$Time.Pupa!="na"))
+  
+  gdat$f.ind= paste(gdat$mother, gdat$ID, sep="_")
+  #take out date
+  tpc1$f.ind= gsub("30Jul_","",tpc1$f.ind)
+  
+  #match
+  match1 <- match(tpc1$f.ind, gdat$f.ind)
+  
+  #add fitness metrics
+  tpc1$Pupa.wt <- gdat[match1, "Mass.Pupa"]
+  tpc1$Time.to.Pupation <- gdat[match1, "Time.Pupa"]
+  tpc1$Pupated <- 0
+  tpc1$Pupated[!is.na(tpc1$Pupa.wt)] <- 1
+          
+  #to long format
+  tpc.l <- melt(tpc1, id.vars = c("Mom", "ID", "f.ind", "expt","Mi","Pupa.wt","Time.to.Pupation","Pupated"), variable.name = "temp")
+  tpc.l$temp= as.numeric(gsub("RGR","",tpc.l$temp))
+  tpc.l$value= as.numeric(tpc.l$value)
+  
+  #update temperature label
+  temp5<- c(11, 17, 23, 29, 35)
+  temps.lab<- c("11°C","17°C","23°C","29°C","35°C")
+  tpc.l$temps.lab<- temps.lab[match(tpc.l$temp, temp5)]
+  tpc.l$temps.lab<- factor(tpc.l$temps.lab, levels=c("11°C","17°C","23°C","29°C","35°C"), ordered=TRUE)
+  
+  #---------
+  #selection plots
+  
+  plot.pm.b<- ggplot(tpc.l, aes(x=value,y=Pupa.wt)) + 
+    facet_grid(expt~temps.lab)+
+    geom_point()+geom_smooth(method="lm")+
+    ylab("Pupal mass (mg)") +xlab("Growth rate (g/g/h)")+
+    theme_bw(base_size=18)
+  
+  plot.surv.b<- ggplot(tpc.l, aes(x=value,y=Pupated)) + 
+    facet_grid(expt~temps.lab)+
+    geom_point()+geom_smooth(method="lm")+
+    ylab("Survival") +xlab("Growth rate (g/g/h)")+
+    theme_bw(base_size=18)
+  
+  #survival distribution plots
+  plot.surv.histb<- ggplot(tpc.l[!is.na(tpc.l$Pupated),], aes(x=value,color=factor(Pupated), group=Pupated)) + 
+    facet_grid(expt~temps.lab)+
+    geom_density(aes(fill=factor(Pupated)), alpha=0.5)+
+    ylab("Density") +xlab("Growth rate (g/g/h)")+
+    theme_bw(base_size=18)
+  
+  #change to development rate
+  tpc.l$devrate= 1/tpc.l$Time.to.Pupation
+  
+  plot.pt.b<- ggplot(tpc.l, aes(x=value,y=devrate)) + 
+    facet_grid(expt~temps.lab)+
+    geom_point()+geom_smooth(method="lm")+
+    ylab("Development rate (1/day)") +xlab("Growth rate (g/g/h)")+
+    theme_bw(base_size=18)
+  
+  #Selection figures
+  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
+  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
+  
+  pdf("./figures/Selection2023.pdf",height = 10, width = 10)
+  plot.pm.b / plot.surv.b / plot.pt.b
+  dev.off()
+  
+  
   

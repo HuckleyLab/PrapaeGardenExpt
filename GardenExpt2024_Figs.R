@@ -7,6 +7,7 @@ library(viridis)
 library(nlme)
 library(lme4)
 library(car)
+library(scales)
 #library(rstatix)
 
 colm<- viridis_pal(option = "mako")(8)
@@ -14,7 +15,7 @@ cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -474,10 +475,10 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   
   #-------------------
   #Combine Var matrices
-  p.mat.m$time<- "recent"; p.mat.m$type<- "var"
-  p.mat.m.h$time<- "initial"; p.mat.m.h$type<- "var"
-  c.mat.m$time<- "recent"; c.mat.m$type<- "cor"
-  c.mat.m.h$time<- "initial"; c.mat.m.h$type<- "cor"
+  p.mat.m$time<- "2024"; p.mat.m$type<- "var"
+  p.mat.m.h$time<- "1999"; p.mat.m.h$type<- "var"
+  c.mat.m$time<- "2024"; c.mat.m$type<- "cor"
+  c.mat.m.h$time<- "1999"; c.mat.m.h$type<- "cor"
   
   var.all<- rbind(p.mat.m, p.mat.m.h, c.mat.m, c.mat.m.h)
   var.all$Var1 <- sub("RGR", "", var.all$Var1)
@@ -493,7 +494,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     scale_fill_gradientn(colours = c("darkgreen","white","darkblue"), 
                          values = rescale(c(-135,0,135)),
                          guide = "colorbar", limits=c(-135,135))+
-    theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)") +ggtitle('A. variance covariance')
+    theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)") +ggtitle('A. variance covariance')+labs(fill="")
   
   cor.var= ggplot(data = var.all[var.all$type=="cor",], aes(x=Var1, y=Var2, fill=value)) + 
     geom_tile()+
@@ -501,7 +502,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     scale_fill_gradientn(colours = c("darkgreen","white","darkblue"), 
                          values = rescale(c(-1,0,1)),
                          guide = "colorbar", limits=c(-1,1))+
-    theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)")+ggtitle('B. correlation')
+    theme_bw(base_size=16) +xlab("Temperature (°C)") +ylab("Temperature (°C)")+ggtitle('B. correlation')+labs(fill="")
   
   #scale_fill_gradient2(low ="darkgreen", high = "darkblue", space = "Lab",
   #                     breaks = c(-1,0,1),labels=c(-1,0,1))+ #changed from -0.3 to -1
@@ -522,10 +523,10 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   ec<- as.data.frame(eigen(c.mat)$vectors)
   ech<- as.data.frame(eigen(c.mat.h)$vectors)
   
-  ep$period= "recent"; ep$type= "var"; ep$ev= c(1:5)
-  eph$period= "initial"; eph$type= "var"; eph$ev= c(1:5)
-  ec$period= "recent"; ec$type= "cor"; ec$ev= c(1:5)
-  ech$period= "initial";  ech$type= "cor"; ech$ev= c(1:5)
+  ep$period= "2024"; ep$type= "var"; ep$ev= c(1:5)
+  eph$period= "1999"; eph$type= "var"; eph$ev= c(1:5)
+  ec$period= "2024"; ec$type= "cor"; ec$ev= c(1:5)
+  ech$period= "1999";  ech$type= "cor"; ech$ev= c(1:5)
   
   e.all<- rbind(ep, eph, ec, ech)
   colnames(e.all)[1:5]<- c(11, 17, 23, 29, 35)
@@ -552,7 +553,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
     geom_point()+geom_smooth(se=FALSE)+ylab("eigenvector")+
     facet_wrap(type.lab~., ncol=1) +
     theme_bw(base_size=16) +xlab("Temperature (°C)")+ylab("Eigenvector")+
-    scale_color_manual(values=cols2)+labs(lty="vector")
+    scale_color_manual(values=cols2)+labs(color="year",lty="vector")
     #scale_color_viridis_d()#+guides(lty = "none")
 
   design <- "AA
