@@ -14,7 +14,7 @@ cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -151,7 +151,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   mod.lmer <- lme(value ~ poly(temp,3)*expt*Mi,random=~1|Mom, data = tpc.b)
   anova(mod.lmer)
   
-  sjPlot::plot_model(mod.lmer, type = "pred", terms = c("temp", "expt"), show.data=FALSE, title="")
+  sjPlot::plot_model(mod.lmer, type = "pred", terms = c("temp [all]", "expt"), show.data=FALSE, title="")
   
   
   #========================================================

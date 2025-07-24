@@ -14,7 +14,7 @@ cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -83,18 +83,18 @@ tpc.plot= ggplot(tpc.l, aes(x=temp,y=value)) +
   #all
   mod= lm(value ~ Mi*poly(temp,3)*expt, data= tpc.b)
   anova(mod)
+  sjPlot::plot_model(mod, type = "pred", terms = c("temp [all]", "expt"), show.data=FALSE, title="")
   
-  mod.lmer <- lme(value ~ poly(temp)*expt*Mi,random=~1|Mom, data = tpc.b)
+  mod.lmer <- lme(value ~ poly(temp,3)*expt*Mi,random=~1|Mom, data = tpc.b)
   anova(mod.lmer)
-  
-  sjPlot::plot_model(mod, type = "pred", terms = c("temp", "expt"), show.data=FALSE, title="")
+  sjPlot::plot_model(mod.lmer, type = "pred", terms = c("temp [all]", "expt"), show.data=FALSE, title="")
   
   #---------
   mod <- lm(value ~ Mi +temp +I(temp^2) +I(temp^3) + expt+
               temp:expt +I(temp^2):expt +I(temp^3):expt, data= tpc.b)
     
   # plot marginal effects of polynomial term
-  sjPlot::plot_model(mod, type = "pred", terms = c("temp","expt"))
+  sjPlot::plot_model(mod, type = "pred", terms = c("temp [all]","expt"))
   
   
   
