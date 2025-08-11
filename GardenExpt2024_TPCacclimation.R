@@ -14,7 +14,7 @@ cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "y"
+desktop<- "n"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -36,11 +36,6 @@ tpc2024<- tpc[,1:10]
 #ADD 2023 data to assess acclimation
 
 tpc2023<- read.csv("./data/PrapaeGardenExpt_WARP_TPC2023.csv")
-
-tpc.agg.f <- tpc.l %>% 
-  group_by(Mom, temp, expt, period) %>% 
-  dplyr::summarise(mean = mean(value, na.rm = TRUE),
-                   se = sd(value, na.rm = TRUE)/length(value) )
 
 tpc<- rbind(tpc2024, tpc2023)
 
@@ -86,6 +81,18 @@ pdf("./figures/FigS1_TPCacclim.pdf",height = 8, width = 8)
 tpc.plot
 dev.off()
 
+#plot over each other
+tpc.plot= ggplot(tpc.l, aes(x=temp,y=value, color=expt)) + 
+  #geom_point(color="black")+
+  #geom_point( aes(col=expt), position = "jitter")+
+  #add family lines
+  geom_line(data=tpc.agg.f, aes(x=temp, y = mean, group=Mom), linewidth=1, alpha=0.5)+  
+  #add points for temperature means  
+  geom_errorbar(data=tpc.agg, aes(x=temp, y=mean, ymin=mean-se, ymax=mean+se), width=0, col="black")+
+  geom_point(data=tpc.agg, aes(x=temp, y = mean, fill=expt), size=2, col="black", pch=21)+
+  theme_classic(base_size=16)+xlab("Temperature (°C)")+ylab("Growth rate (g/g/h)") +
+  ylim(-0.02,0.06) #+facet_wrap(.~expt)
+
 #------------
 
   #assess potential for acclimation
@@ -108,6 +115,13 @@ dev.off()
   sjPlot::plot_model(mod, type = "pred", terms = c("temp [all]", "expt"), show.data=FALSE, title="")
   
   mod.lmer <- lme(value ~ poly(temp,3)*expt*Mi,random=~1|Mom, data = tpc.b) #random=~1|expt/Mom
+  
+  #put experiment as random effect
+  mod.lmer <- lme(value ~ poly(temp,3)*Mi,random=~1|expt/Mom, data = tpc.b) 
+  
+  sigma(mod.lmer)
+  #standard deviations of the random effects
+  VarCorr(mod.lmer)
   
   #Save anova
   tables1<- as.data.frame(anova(mod.lmer))
