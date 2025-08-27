@@ -14,7 +14,7 @@ cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
 #toggle between desktop (y) and laptop (n)
-desktop<- "n"
+desktop<- "y"
 if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
@@ -33,7 +33,7 @@ tpc$expt <- factor(tpc$expt, levels= c("Aug 1999","June 2024","July 2024"), orde
 tpc2024<- tpc[,1:10]
 
 #==============================
-#ADD 2023 data to assess acclimation
+#ADD 2023 data to assess parental effects
 
 tpc2023<- read.csv("./data/PrapaeGardenExpt_WARP_TPC2023.csv")
 
@@ -61,6 +61,12 @@ tpc.agg <- tpc.l %>%
   dplyr::summarise(mean = mean(value, na.rm = TRUE),
                    se = sd(value, na.rm = TRUE)/sqrt(length(value)) )
 
+#estimate grand mean
+tpc.gm <- tpc.l[which(tpc.l$expt %in% c("June 2024", "July 2024") ),] %>% 
+  group_by(temp) %>% 
+  dplyr::summarise(mean = mean(value, na.rm = TRUE),
+                   se = sd(value, na.rm = TRUE)/sqrt(length(value)) )
+
 #-----------
 #TPC comparison between experiments
 
@@ -74,10 +80,12 @@ tpc.plot= ggplot(tpc.l, aes(x=temp,y=value)) +
   geom_point(data=tpc.agg, aes(x=temp, y = mean), size=2, fill=colm[7], col="black", pch=21)+
   theme_classic(base_size=16)+xlab("Temperature (°C)")+ylab("Growth rate (g/g/h)") +
   ylim(-0.02,0.06)+
-  facet_wrap(.~expt)
+  facet_wrap(.~expt)+
+#add grand means
+  geom_line(data=tpc.gm, aes(x=temp, y = mean), col="black", linewidth=2, alpha=0.5)
 
 #save figure
-pdf("./figures/FigS1_TPCacclim.pdf",height = 8, width = 8)
+pdf("./figures/FigS1_TPCparental.pdf",height = 8, width = 8)
 tpc.plot
 dev.off()
 
