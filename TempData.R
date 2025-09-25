@@ -10,15 +10,16 @@ library(ggridges)
 library(lubridate)
 library(readxl)
 library(dplyr)
+library(rTPC)
 
 colm<- viridis_pal(option = "mako")(8)
 cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
-#toggle between desktop (y) and laptop (n)
-desktop<- "y"
-if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
-if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
+# #toggle between desktop (y) and laptop (n)
+# desktop<- "y"
+# if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
+# if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
 
 tdat<- read.csv("./data/PrapaeGardenTemps_WARP.csv")
 
@@ -153,9 +154,23 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   
   #----
   #load and plot short term growth rate
-  #run TPCfits to get data
+ 
+  tpc1<- read.csv("data/TPCconstant_past.csv")
+  
+  #estimates means across temperatures
+  tpc.agg.f2 <- tpc1 %>%
+    group_by(temp) %>% 
+    dplyr::summarise(
+      mean = mean(rgrlog, na.rm = TRUE),
+      n= length(rgrlog),
+      se = sd(rgrlog, na.rm = TRUE) / sqrt(n)
+    )
+  
   tpc.agg.f2 <- as.data.frame(tpc.agg.f2)
   tpc.agg.f2$Year= 1999
+  
+  #beta TPC parameters, estimated in archcive code/TPCfits.R
+  beta.params= c(0.03134642, 34.65487908, 100.71536023, 11.55893992, 1.76555039)
   
   temps<- 1:50
   tpc.dat<- cbind(temps, beta_2012(temp = temps, a=beta.params[1], b=beta.params[2], c=beta.params[3], d=beta.params[4], e=beta.params[5]))
@@ -170,10 +185,42 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   pm.sg= c(0.338,0.182, 0.190, -0.233, -0.217) #selection gradient for pupal mass
   sg= as.data.frame(cbind(temps, pm.sg))
   sg$Year=1999
-  #add y values from GardenExpt2024.R code
+  
+  #--------
+  #add y values 
+  #load data
+  tpc<- read.csv("./data/PrapaeGardenExpt_WARP.csv")
+  #drop unneeded columns
+  tpc<- tpc[,-which(colnames(tpc) %in% c("X", "Species", "Population", "Study.Site"))]
+  
+  #update experiment labels
+  expts<- c("june","july","aug")
+  expts.lab<- c("June 2024","July 2024","Aug 1999")
+  
+  tpc$expt <- expts.lab[match(tpc$expt,expts)]
+  tpc$expt <- factor(tpc$expt, levels= c("Aug 1999","June 2024","July 2024"), ordered=TRUE)
+  
+  #to long format
+  tpc.l <- melt(tpc, id.vars = c("Mom", "ID", "f.ind", "expt","period","Mi","Pupa.wt","Fecundity", "Time.to.Pupation","Pupated","Eclosed","Time.to.Eclosion","Sex","Butt..Wt"), variable.name = "temp")
+  tpc.l$temp= as.numeric(gsub("RGR","",tpc.l$temp))
+  tpc.l$value= as.numeric(tpc.l$value)
+  
+  #estimate family mean values
+  tpc.agg.f <- tpc.l %>% 
+    group_by(Mom, temp, expt, period) %>% 
+    dplyr::summarise(mean = mean(value, na.rm = TRUE),
+                     se = sd(value, na.rm = TRUE)/length(value) )
+  
+  #estimate temperature mean values
+  tpc.agg <- tpc.l %>% 
+    group_by(temp, period) %>% 
+    dplyr::summarise(mean = mean(value, na.rm = TRUE),
+                     se = sd(value, na.rm = TRUE)/sqrt(length(value)) )
+  
   tpc.agg.h<- as.data.frame(tpc.agg[tpc.agg$period=="past",])
   tpc.agg.h$Year<- 1999
   
+  #--------
   #past tpc data
   inds<- match(sg$temps, tpc.agg.h$temp)
   sg$ys<- tpc.agg.h$mean[inds]
@@ -240,7 +287,7 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
       #add growth rate distribution
       geom_line(data=ZT, aes(x=temp, y=z), linewidth=0.75)+
     xlim(0,42)+
-    ylab("Densities")+theme(legend.position = "none")+ #ylab("Growth and T densities")
+    ylab("Densities")+theme(legend.position = "none")+ 
     #add 1999 feeding data
     geom_point(data=tpc.agg.h, aes(x=temp, y=mean))+
     geom_line(data=tpc.agg.h, aes(x=temp, y=mean), lwd=1.4)+
@@ -280,10 +327,7 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   #find stations: https://ncics.org/portfolio/monitor/ghcn-d-station-data/ 
   # SEATTLE SAND POINT WEATHER FORECAST OFFICE, WA US (USW00094290)
   
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/GHCNdata/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/data/GHCNdata/")
-  
-  t.dat<- read.csv("USW00094290_2025.csv")
+  t.dat<- read.csv("data/GHCNdata/USW00094290_2025.csv")
   t.dat$site="Seattle"
   
   t.dat$tmin= t.dat$TMIN /10 #divide by ten due to GHCND format
@@ -371,16 +415,14 @@ Tplot<- tdat.mean[which(tdat.mean$dt>227 & tdat.mean$dt<238 & tdat.mean$Year %in
   
   #----------------
   #Save figures
-  if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
-  if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/figures/")
-  
+
   # design <- "AB
   #              CD"
   design<- "A
   B
   C"
   
-  pdf("Fig_Tdist.pdf",height = 10, width = 6)
+  pdf("figures/Fig1_Tdist.pdf",height = 10, width = 6)
   month.plot + TZdist.plot + Tdist.exp.plot + plot_layout(design=design) +plot_annotation(tag_levels = 'A')
   dev.off()
   #=============================

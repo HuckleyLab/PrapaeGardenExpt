@@ -14,11 +14,6 @@ colm<- viridis_pal(option = "mako")(8)
 cols<- colm[c(2,4,7)]
 cols2<- colm[c(2,6)]
 
-#toggle between desktop (y) and laptop (n)
-desktop<- "y"
-if(desktop=="y") setwd("/Users/laurenbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
-if(desktop=="n") setwd("/Users/lbuckley/Google Drive/Shared drives/TrEnCh/Projects/WARP/Projects/PrapaeGardenExpt/")
-
 #load data
 tpc<- read.csv("./data/PrapaeGardenExpt_WARP.csv")
 #drop unneeded columns
@@ -787,7 +782,7 @@ tpc.plot.all= ggplot(tpc.agg.f, aes(x=temp,y=mean, col=factor(period)))+
   plot.cor2<- ggplot(tpc.l, aes(x=Pupa.wt,y=Fecundity, color=expt)) + 
     geom_point()+geom_smooth(method="lm")
   
-  pdf("Prapae_correlations.pdf",height = 6, width = 10)
+  pdf(".figures/Prapae_correlations.pdf",height = 6, width = 10)
   plot.cor1 +plot.cor2
   dev.off()
   
